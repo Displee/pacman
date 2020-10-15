@@ -13,4 +13,4 @@ main = playIO (InWindow "PacMan" (800, 600) (0, 0)) -- Or FullScreen
               initialState     -- Initial state
               view             -- View function
               input            -- Event function
-              step             -- Step function
+              loop             -- The game loop function

@@ -6,9 +6,9 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
 
--- | Handle one iteration of the game
-step :: Float -> GameState -> IO GameState
-step seconds gstate = do
+-- | Handle the game loop
+loop :: Float -> GameState -> IO GameState
+loop seconds gstate = do
                         return gstate
 
 -- | Handle user input
