@@ -28,4 +28,4 @@ cellSize :: Float
 cellSize = 15
 
 initialState :: GameState
-initialState = GameState (Maze 300 300 0) NotPlaying
+initialState = GameState (Maze 50 15 0) NotPlaying

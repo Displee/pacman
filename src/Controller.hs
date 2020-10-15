@@ -25,9 +25,16 @@ rect :: Float -> Float -> Float -> Float -> Picture
 rect startX startY endX endY = Color white $ Line [(startX, startY), (endX, startY), (endX, endY), (startX, endY), (startX, startY)]
 
 cell :: Float -> Float -> Float -> Float -> Picture
-cell pl pt x y = translate (fromIntegral screenWidth * (-0.5)) (fromIntegral screenHeight * 0) frame
+cell pl pt x y = frame--translate (fromIntegral screenWidth * (-0.5)) (fromIntegral screenHeight * 0) frame
            where
                 frame = rect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
 
 grid :: Int -> Int -> Int -> Int -> [Picture]
-grid x y width height = [cell (fromIntegral x) (fromIntegral (-y)) (fromIntegral a) (fromIntegral b) | a <- [0..width - 1], b <- [0..height - 1]]
+grid x y width height = [cell (fromIntegral x + screenOffsetX) (fromIntegral (-y) + screenOffsetY) (fromIntegral a) (fromIntegral b) | a <- [0..width - 1], b <- [0..height - 1]]
+                        where
+                             halfScreenHeight :: Int
+                             halfScreenHeight = screenHeight `div` 2
+                             screenOffsetX :: Float
+                             screenOffsetX = fromIntegral screenWidth * (-0.5)
+                             screenOffsetY :: Float
+                             screenOffsetY = fromIntegral (halfScreenHeight - (height * round cellSize))
