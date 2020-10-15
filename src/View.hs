@@ -1,6 +1,7 @@
 module View where
 
 import Model
+import Controller
 
 import Graphics.Gloss
 
@@ -9,6 +10,6 @@ view = return . viewPure
 
 viewPure :: GameState -> Picture
 viewPure gs = case status gs of
-  NotPlaying  -> color green (text "Not playing!")
+  NotPlaying  -> Pictures (grid 0 0 15 15)
   Playing     -> color green (text "Playing!")
   GameOver    -> color green (text "Game over!")

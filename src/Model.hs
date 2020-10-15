@@ -18,5 +18,14 @@ data Maze = Maze {
     level :: Int
 }
 
+screenWidth :: Int
+screenWidth = 800
+
+screenHeight :: Int
+screenHeight = 600
+
+cellSize :: Float
+cellSize = 15
+
 initialState :: GameState
 initialState = GameState (Maze 300 300 0) NotPlaying
