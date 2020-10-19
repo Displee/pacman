@@ -8,15 +8,20 @@ data GameState = GameState {
     player :: Player
 }
 
+data TileType = Dot | FlashingDot | NormalTile | Wall
+                deriving(Eq, Show)
+
 data Tile = Tile {
     x :: Int,
-    y :: Int
-}
+    y :: Int,
+    tileType :: TileType
+} deriving(Show)
 
 data Maze = Maze {
     width :: Int,
     height :: Int,
-    level :: Int
+    level :: Int,
+    tiles :: [Tile]
 }
 
 data Player = Player {
@@ -37,6 +42,3 @@ gridPaddingLeft = 10
 
 gridPaddingTop :: Int
 gridPaddingTop = 10
-
-initialState :: GameState
-initialState = GameState (Maze 50 15 0) NotPlaying (Player (Tile 3 3))

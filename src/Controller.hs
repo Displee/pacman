@@ -43,12 +43,24 @@ fillRect startX startY endX endY c = Color c $ Polygon [(startX, startY), (endX,
 fillCell :: Float -> Float -> Float -> Float -> Color -> Picture
 fillCell pl pt x y = fillRect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
 
-fillCellSmart :: Int -> Int -> Float -> Float -> Color -> Picture
-fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegral (-pt) + screenOffsetY) x y
+fillCellSmart :: Int -> Int -> Int -> Int -> Color -> Picture
+fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegral (-pt) + screenOffsetY) (fromIntegral x) (fromIntegral y)
                           where
                                 halfScreenHeight :: Int
                                 halfScreenHeight = screenHeight `div` 2
                                 screenOffsetX :: Float
                                 screenOffsetX = fromIntegral screenWidth * (-0.5)
                                 screenOffsetY :: Float
-                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * y)
+                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * (fromIntegral y))
+
+gridMaker :: Int -> Int ->  [Char]-> [ Tile]
+gridMaker x y [] =[]
+gridMaker x y (n:ns) | n == '\n' = gridMaker 1 (y+1) ns
+                     | otherwise = gridMaker' x y n  : gridMaker (x+1) y ns
+
+gridMaker' :: Int -> Int -> Char -> Tile
+gridMaker' x y '.'  = Tile {x= x ,y= y, tileType= Dot}
+gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
+gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
+gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
+
