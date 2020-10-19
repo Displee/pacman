@@ -25,9 +25,7 @@ rect :: Float -> Float -> Float -> Float -> Picture
 rect startX startY endX endY = Color white $ Line [(startX, startY), (endX, startY), (endX, endY), (startX, endY), (startX, startY)]
 
 cell :: Float -> Float -> Float -> Float -> Picture
-cell pl pt x y = frame--translate (fromIntegral screenWidth * (-0.5)) (fromIntegral screenHeight * 0) frame
-           where
-                frame = rect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
+cell pl pt x y = rect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
 
 grid :: Int -> Int -> Int -> Int -> [Picture]
 grid x y width height = [cell (fromIntegral x + screenOffsetX) (fromIntegral (-y) + screenOffsetY) (fromIntegral a) (fromIntegral b) | a <- [0..width - 1], b <- [0..height - 1]]
@@ -38,3 +36,19 @@ grid x y width height = [cell (fromIntegral x + screenOffsetX) (fromIntegral (-y
                              screenOffsetX = fromIntegral screenWidth * (-0.5)
                              screenOffsetY :: Float
                              screenOffsetY = fromIntegral (halfScreenHeight - (height * round cellSize))
+
+fillRect :: Float -> Float -> Float -> Float -> Color -> Picture
+fillRect startX startY endX endY c = Color c $ Polygon [(startX, startY), (endX, startY), (endX, endY), (startX, endY), (startX, startY)]
+
+fillCell :: Float -> Float -> Float -> Float -> Color -> Picture
+fillCell pl pt x y = fillRect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
+
+fillCellSmart :: Int -> Int -> Float -> Float -> Color -> Picture
+fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegral (-pt) + screenOffsetY) x y
+                          where
+                                halfScreenHeight :: Int
+                                halfScreenHeight = screenHeight `div` 2
+                                screenOffsetX :: Float
+                                screenOffsetX = fromIntegral screenWidth * (-0.5)
+                                screenOffsetY :: Float
+                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * y)

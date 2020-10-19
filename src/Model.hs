@@ -4,7 +4,8 @@ data GameStatus = NotPlaying | Playing | GameOver
 
 data GameState = GameState {
     maze :: Maze,
-    status :: GameStatus
+    status :: GameStatus,
+    player :: Player
 }
 
 data Tile = Tile {
@@ -18,6 +19,10 @@ data Maze = Maze {
     level :: Int
 }
 
+data Player = Player {
+    position :: Tile
+}
+
 screenWidth :: Int
 screenWidth = 800
 
@@ -27,5 +32,11 @@ screenHeight = 600
 cellSize :: Float
 cellSize = 15
 
+gridPaddingLeft :: Int
+gridPaddingLeft = 10
+
+gridPaddingTop :: Int
+gridPaddingTop = 10
+
 initialState :: GameState
-initialState = GameState (Maze 50 15 0) NotPlaying
+initialState = GameState (Maze 50 15 0) NotPlaying (Player (Tile 3 3))

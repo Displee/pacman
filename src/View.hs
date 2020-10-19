@@ -9,7 +9,7 @@ view :: GameState -> IO Picture
 view = return . viewPure
 
 notPlayingGrid :: GameState -> Picture
-notPlayingGrid (GameState (Maze w h l) status) = Pictures (grid 10 10 w h)
+notPlayingGrid (GameState (Maze w h l) status p) = Pictures (grid gridPaddingLeft gridPaddingTop w h)
 
 viewPure :: GameState -> Picture
 viewPure gs = case status gs of
