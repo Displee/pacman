@@ -3,30 +3,50 @@ module Model where
 data GameStatus = NotPlaying | Playing | GameOver
 
 data GameState = GameState {
-    maze :: Maze,
-    status :: GameStatus,
-    player :: Player
-}
+      maze :: Maze,
+      status :: GameStatus,
+      player :: Player,
+      ghosts :: [Ghost]
+  }
 
 data TileType = Dot | FlashingDot | NormalTile | Wall
-                deriving(Eq, Show)
+                  deriving(Eq, Show)
+data Direction = North | East | South | West
 
+data GhostType = Pinky | Inky| Blinky | Clyde
+
+data Mode = Scatter | Chase | Frighten
+
+data Ghost = Ghost {
+                      ghosttype :: GhostType,
+                      posghost :: Tile,
+                      directionghost :: Direction,
+                      velocityghost:: Int,
+                      mode :: Mode ,
+                      targetLocation:: Tile
+                      }
 data Tile = Tile {
-    x :: Int,
-    y :: Int,
-    tileType :: TileType
-} deriving(Show)
+      x :: Int,
+      y :: Int,
+      tileType :: TileType
+                    } deriving(Show)
+
 
 data Maze = Maze {
-    width :: Int,
-    height :: Int,
-    level :: Int,
-    tiles :: [Tile]
-}
+      width  :: Int,
+      height :: Int,
+      level  :: Int,
+      tiles  :: [Tile]                  
+                  }
 
 data Player = Player {
-    position :: Tile
-}
+                      posplayer :: Tile,
+                      direction :: Direction,
+                      velocity :: Int,
+                      score :: Int,
+                      lifes :: Int
+                      }
+
 
 screenWidth :: Int
 screenWidth = 800

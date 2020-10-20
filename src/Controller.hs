@@ -8,17 +8,24 @@ import System.Random
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate = do
-                        return gstate
+loop seconds gstate = return (direction' gstate)
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gstate = return (inputKey e gstate)
 
-inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (Char c) _ _ _) gstate = gstate
-inputKey _ gstate = gstate -- Otherwise keep the same
+direction' :: GameState -> GameState
+direction' (GameState m s (Player (Tile x y k ) North v sc li) g )= (GameState m s (Player (Tile x (y+1) k) North v sc li) g )
+direction' (GameState m s (Player (Tile x y k ) South v sc li) g )= (GameState m s (Player (Tile x (y-1) k) South v sc li) g )
+direction' (GameState m s (Player (Tile x y k ) East v sc li) g ) = (GameState m s (Player (Tile (x-1) y k) East v sc li) g )
+direction' (GameState m s (Player (Tile x y k ) _    v sc li) g ) = (GameState m s (Player (Tile (x+1) y k) West v sc li) g )
 
+inputKey :: Event -> GameState -> GameState
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pp _ v sc li) g ) = (GameState m s (Player pp North v sc li) g )
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pp _ v sc li) g ) = (GameState m s (Player pp South v sc li) g )
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pp _ v sc li) g ) = (GameState m s (Player pp West v sc li) g )
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pp _ v sc li) g ) = (GameState m s (Player pp East v sc li) g )
+inputKey _ gstate = gstate
 -- | Grid functions
 
 rect :: Float -> Float -> Float -> Float -> Picture
@@ -63,4 +70,3 @@ gridMaker' x y '.'  = Tile {x= x ,y= y, tileType= Dot}
 gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
 gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
 gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
-
