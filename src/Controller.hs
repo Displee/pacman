@@ -16,7 +16,7 @@ input :: Event -> GameState -> IO GameState
 input e gstate@(GameState m s (Player px py pt d nd v sc li) g) = return (inputKey e gstate)
 
 direction' :: GameState -> GameState
-direction' (GameState m s (Player px py (Tile x y k ) North nd v sc li) g ) = (GameState m s (Player px (py + 1) (Tile x y k) dir nextDir v sc li) g )
+direction' (GameState m s (Player px py (Tile x y k ) North nd v sc li) g ) = (GameState m s (Player px (py + 1) (Tile tileX tileY k) dir nextDir v sc li) g )
                                                                               where
                                                                                     tileX = screenXToTile(px)
                                                                                     tileY = screenYToTile(py)
@@ -27,7 +27,7 @@ direction' (GameState m s (Player px py (Tile x y k ) North nd v sc li) g ) = (G
                                                                                         | otherwise = North
                                                                                     nextDir | updateDirection = Nothing
                                                                                             | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) South nd v sc li) g) = (GameState m s (Player px (py - 1) (Tile x y k) dir nextDir v sc li) g )
+direction' (GameState m s (Player px py (Tile x y k ) South nd v sc li) g) = (GameState m s (Player px (py - 1) (Tile tileX tileY k) dir nextDir v sc li) g )
                                                                               where
                                                                                     tileX = screenXToTile(px)
                                                                                     tileY = screenYToTile(py)
@@ -38,7 +38,7 @@ direction' (GameState m s (Player px py (Tile x y k ) South nd v sc li) g) = (Ga
                                                                                         | otherwise = South
                                                                                     nextDir | updateDirection = Nothing
                                                                                             | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) East nd v sc li) g) = (GameState m s (Player (px - 1) py (Tile x y k) dir nextDir v sc li) g )
+direction' (GameState m s (Player px py (Tile x y k ) East nd v sc li) g) = (GameState m s (Player (px - 1) py (Tile tileX tileY k) dir nextDir v sc li) g )
                                                                               where
                                                                                     tileX = screenXToTile(px)
                                                                                     tileY = screenYToTile(py)
@@ -49,7 +49,7 @@ direction' (GameState m s (Player px py (Tile x y k ) East nd v sc li) g) = (Gam
                                                                                         | otherwise = East
                                                                                     nextDir | updateDirection = Nothing
                                                                                             | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) West nd v sc li) g) = (GameState m s (Player (px + 1) py (Tile x y k) dir nextDir v sc li) g )
+direction' (GameState m s (Player px py (Tile x y k ) West nd v sc li) g) = (GameState m s (Player (px + 1) py (Tile tileX tileY k) dir nextDir v sc li) g )
                                                                               where
                                                                                     tileX = screenXToTile(px)
                                                                                     tileY = screenYToTile(py)
