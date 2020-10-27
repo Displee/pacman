@@ -5,20 +5,68 @@ import Model
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
+import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate = do
-                        return gstate
+loop seconds gstate = return (direction' gstate)
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate = return (inputKey e gstate)
+input e gstate@(GameState m s (Player px py pt d nd v sc li) g) = return (inputKey e gstate)
+
+direction' :: GameState -> GameState
+direction' (GameState m s (Player px py (Tile x y k ) North nd v sc li) g ) = (GameState m s (Player px (py + 1) (Tile x y k) dir nextDir v sc li) g )
+                                                                              where
+                                                                                    tileX = screenXToTile(px)
+                                                                                    tileY = screenYToTile(py)
+                                                                                    realScreenX = tileToScreenX(tileX)
+                                                                                    realScreenY = tileToScreenY(tileY)
+                                                                                    updateDirection = px == realScreenX || py == realScreenY
+                                                                                    dir | updateDirection && isJust nd = fromJust nd
+                                                                                        | otherwise = North
+                                                                                    nextDir | updateDirection = Nothing
+                                                                                            | otherwise = nd
+direction' (GameState m s (Player px py (Tile x y k ) South nd v sc li) g) = (GameState m s (Player px (py - 1) (Tile x y k) dir nextDir v sc li) g )
+                                                                              where
+                                                                                    tileX = screenXToTile(px)
+                                                                                    tileY = screenYToTile(py)
+                                                                                    realScreenX = tileToScreenX(tileX)
+                                                                                    realScreenY = tileToScreenY(tileY)
+                                                                                    updateDirection = px == realScreenX || py == realScreenY
+                                                                                    dir | updateDirection && isJust nd = fromJust nd
+                                                                                        | otherwise = South
+                                                                                    nextDir | updateDirection = Nothing
+                                                                                            | otherwise = nd
+direction' (GameState m s (Player px py (Tile x y k ) East nd v sc li) g) = (GameState m s (Player (px - 1) py (Tile x y k) dir nextDir v sc li) g )
+                                                                              where
+                                                                                    tileX = screenXToTile(px)
+                                                                                    tileY = screenYToTile(py)
+                                                                                    realScreenX = tileToScreenX(tileX)
+                                                                                    realScreenY = tileToScreenY(tileY)
+                                                                                    updateDirection = px == realScreenX || py == realScreenY
+                                                                                    dir | updateDirection && isJust nd = fromJust nd
+                                                                                        | otherwise = East
+                                                                                    nextDir | updateDirection = Nothing
+                                                                                            | otherwise = nd
+direction' (GameState m s (Player px py (Tile x y k ) West nd v sc li) g) = (GameState m s (Player (px + 1) py (Tile x y k) dir nextDir v sc li) g )
+                                                                              where
+                                                                                    tileX = screenXToTile(px)
+                                                                                    tileY = screenYToTile(py)
+                                                                                    realScreenX = tileToScreenX(tileX)
+                                                                                    realScreenY = tileToScreenY(tileY)
+                                                                                    updateDirection = px == realScreenX || py == realScreenY
+                                                                                    dir | updateDirection && isJust nd = fromJust nd
+                                                                                        | otherwise = West
+                                                                                    nextDir | updateDirection = Nothing
+                                                                                            | otherwise = nd
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (Char c) _ _ _) gstate = gstate
-inputKey _ gstate = gstate -- Otherwise keep the same
-
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just North) v sc li) g )
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just South) v sc li) g )
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just West) v sc li) g )
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just East) v sc li) g )
+inputKey _ gstate = gstate
 -- | Grid functions
 
 rect :: Float -> Float -> Float -> Float -> Picture
@@ -51,7 +99,7 @@ fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegr
                                 screenOffsetX :: Float
                                 screenOffsetX = fromIntegral screenWidth * (-0.5)
                                 screenOffsetY :: Float
-                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * (fromIntegral y))
+                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
 
 gridMaker :: Int -> Int ->  [Char]-> [ Tile]
 gridMaker x y [] =[]
@@ -64,3 +112,33 @@ gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
 gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
 gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
 
+-- I'm not sure where the 7 and 7.5 come from, I think it has to do with the bmp dimensions of pacman which is 12x13
+-- However these two values are used to show pacman in the middle of the tile
+
+tileToScreenX :: Int -> Float
+tileToScreenX x = fromIntegral gridPaddingLeft + screenOffsetX + (cellSize * fromIntegral x) + 7
+            where
+                  screenOffsetX :: Float
+                  screenOffsetX = fromIntegral screenWidth * (-0.5)
+
+tileToScreenY :: Int -> Float
+tileToScreenY y = fromIntegral (-gridPaddingTop) + screenOffsetY + (cellSize * fromIntegral y) + 7.5
+            where
+                  halfScreenHeight :: Int
+                  halfScreenHeight = screenHeight `div` 2
+                  screenOffsetY :: Float
+                  screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
+
+screenXToTile :: Float -> Int
+screenXToTile x = round $ (x - 7 - fromIntegral gridPaddingLeft - screenOffsetX) / cellSize
+                  where
+                        screenOffsetX :: Float
+                        screenOffsetX = fromIntegral screenWidth * (-0.5)
+
+screenYToTile :: Float -> Int
+screenYToTile y = -(round $ (y - 7.5 + fromIntegral gridPaddingTop - screenOffsetY) / cellSize)
+                  where
+                        halfScreenHeight :: Int
+                        halfScreenHeight = screenHeight `div` 2
+                        screenOffsetY :: Float
+                        screenOffsetY = fromIntegral halfScreenHeight - cellSize
