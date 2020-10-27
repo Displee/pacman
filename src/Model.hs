@@ -1,6 +1,6 @@
 module Model where
 
-data GameStatus = NotPlaying | Playing | GameOver
+data GameStatus = NotPlaying | Playing | GameOver deriving (Eq, Show)
 
 data GameState = GameState {
       maze :: Maze,
@@ -11,7 +11,7 @@ data GameState = GameState {
 
 data TileType = Dot | FlashingDot | NormalTile | Wall
                   deriving(Eq, Show)
-data Direction = North | East | South | West
+data Direction = North | East | South | West deriving(Eq, Show)
 
 data GhostType = Pinky | Inky| Blinky | Clyde
 
@@ -40,8 +40,11 @@ data Maze = Maze {
                   }
 
 data Player = Player {
+                      playerX :: Float,
+                      playerY :: Float,
                       posplayer :: Tile,
                       direction :: Direction,
+                      nextDirection :: Maybe Direction,
                       velocity :: Int,
                       score :: Int,
                       lifes :: Int
