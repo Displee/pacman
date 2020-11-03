@@ -1,5 +1,8 @@
 module Model where
 
+import Graphics.Gloss.Data.Picture (Picture)
+
+
 data GameStatus = NotPlaying | Playing | GameOver deriving (Eq, Show)
 
 data GameState = GameState {
@@ -18,6 +21,9 @@ data GhostType = Pinky | Inky| Blinky | Clyde
 data Mode = Scatter | Chase | Frighten
 
 data Ghost = Ghost {
+                      gx :: Float,
+                      gy :: Float,
+                      ghostIcon :: Picture,
                       ghosttype :: GhostType,
                       posghost :: Tile,
                       directionghost :: Direction,
@@ -40,6 +46,7 @@ data Maze = Maze {
                   }
 
 data Player = Player {
+                      playerIcon :: Picture,
                       playerX :: Float,
                       playerY :: Float,
                       posplayer :: Tile,
