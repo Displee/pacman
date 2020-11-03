@@ -22,15 +22,9 @@ direction' (GameState m s p@(Player pi px py (Tile x y tt) d nd v sc li) g ) = G
                                                                             where
                                                                                   tileX = screenXToTile px
                                                                                   tileY = screenYToTile py
-                                                                                  frontTileX | d == West = tileX - 1
-                                                                                             | d == East = tileX + 1
-                                                                                             | otherwise = tileX
-                                                                                  frontTileY | d == North = tileY - 1
-                                                                                             | d == South = tileY + 1
-                                                                                             | otherwise = tileY
                                                                                   updateDirection = playerIsOnTileInt p tileX tileY
-                                                                                  frontTileIsWall = getTileType (tileInFront m frontTileX frontTileY) == Wall
-                                                                                  dir | updateDirection && isJust nd = fromJust nd
+                                                                                  frontTileIsWall = getTileType (tileInFront m d tileX tileY) == Wall
+                                                                                  dir | updateDirection && isJust nd && getTileType (tileInFront m (fromJust nd) tileX tileY) /= Wall = fromJust nd
                                                                                       | otherwise = d
                                                                                   newPx | frontTileIsWall && updateDirection = px
                                                                                         | dir == West = px - 1
@@ -40,11 +34,14 @@ direction' (GameState m s p@(Player pi px py (Tile x y tt) d nd v sc li) g ) = G
                                                                                         | dir == North = py + 1
                                                                                         | dir == South = py - 1
                                                                                         | otherwise = py
-                                                                                  nextDir | updateDirection = Nothing
+                                                                                  nextDir | updateDirection && isJust nd && getTileType (tileInFront m (fromJust nd) tileX tileY) /= Wall = Nothing
                                                                                           | otherwise = nd
 
-tileInFront :: Maze -> Int -> Int -> Tile
-tileInFront (Maze _ _ _ xs) x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y) xs
+tileInFront :: Maze -> Direction -> Int -> Int -> Tile
+tileInFront (Maze _ _ _ xs) North x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y - 1) xs
+tileInFront (Maze _ _ _ xs) South x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y + 1) xs
+tileInFront (Maze _ _ _ xs) East x y = head $ filter (\(Tile tx ty _) -> tx == x + 1 && ty == y) xs
+tileInFront (Maze _ _ _ xs) West x y = head $ filter (\(Tile tx ty _) -> tx == x - 1 && ty == y) xs
 
 getTileType :: Tile -> TileType
 getTileType (Tile _ _ t) = t
