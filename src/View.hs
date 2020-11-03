@@ -6,7 +6,7 @@ import Controller
 import Graphics.Gloss
 
 getGhostIcon :: Ghost -> Picture
-getGhostIcon (Ghost gx gy gi _ _ _ _ _ _ _ _) = translate gx gy gi
+getGhostIcon (Ghost gx gy gi _ _ _ _ _ _ _ _ _) = translate gx gy gi
 
 view :: GameState -> IO Picture
 view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g _) = do
