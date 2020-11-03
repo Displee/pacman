@@ -9,7 +9,8 @@ data GameState = GameState {
       maze :: Maze,
       status :: GameStatus,
       player :: Player,
-      ghosts :: [Ghost]
+      ghosts :: [Ghost],
+      gameTick :: Int
   }
 
 data TileType = Dot | FlashingDot | NormalTile | Wall
@@ -27,9 +28,11 @@ data Ghost = Ghost {
                       ghosttype :: GhostType,
                       posghost :: Tile,
                       directionghost :: Direction,
+                      nextGhostDirection :: Maybe Direction,
                       velocityghost:: Int,
                       mode :: Mode ,
-                      targetLocation:: Tile
+                      targetLocation:: Tile,
+                      cageTicks :: Int
                       }
 data Tile = Tile {
       x :: Int,
@@ -51,7 +54,7 @@ data Player = Player {
                       playerY :: Float,
                       posplayer :: Tile,
                       direction :: Direction,
-                      nextDirection :: Maybe Direction,
+                      nextPlayerDirection :: Maybe Direction,
                       velocity :: Int,
                       score :: Int,
                       lifes :: Int
@@ -72,3 +75,6 @@ gridPaddingLeft = 10
 
 gridPaddingTop :: Int
 gridPaddingTop = 10
+
+startGhostCageTicks :: Int
+startGhostCageTicks = 50

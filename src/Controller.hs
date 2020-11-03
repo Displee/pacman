@@ -9,55 +9,70 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate@(GameState m s p@(Player _ px py (Tile _ _ k) d nd v sc li) g) = do
-                                                                       -- TODO Ghosts
-                                                                       return (direction' gstate)
+loop seconds gstate@(GameState m s p g gt) = do
+                                             let player = handlePlayerMovement m p
+                                             let ghosts = map (handleGhostMovement m) g
+                                             return (GameState m s player ghosts (gt + 1))
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate@(GameState m s (Player _ px py pt d nd v sc li) g) = return (inputKey e gstate)
+input e gstate@(GameState m s (Player _ px py pt d nd v sc li) g gt) = return (inputKey e gstate)
 
-direction' :: GameState -> GameState
-direction' (GameState m s p@(Player pi px py (Tile x y tt) d nd v sc li) g ) = GameState m s (Player pi newPx newPy (Tile tileX tileY tt) dir nextDir v sc li) g
-                                                                            where
-                                                                                  tileX = screenXToTile px
-                                                                                  tileY = screenYToTile py
-                                                                                  updateDirection = playerIsOnTileInt p tileX tileY
-                                                                                  frontTileIsWall = getTileType (tileInFront m d tileX tileY) == Wall
-                                                                                  dir | updateDirection && isJust nd && getTileType (tileInFront m (fromJust nd) tileX tileY) /= Wall = fromJust nd
-                                                                                      | otherwise = d
-                                                                                  newPx | frontTileIsWall && updateDirection = px
-                                                                                        | dir == West = px - 1
-                                                                                        | dir == East = px + 1
-                                                                                        | otherwise = px
-                                                                                  newPy | frontTileIsWall && updateDirection = py
-                                                                                        | dir == North = py + 1
-                                                                                        | dir == South = py - 1
-                                                                                        | otherwise = py
-                                                                                  nextDir | updateDirection && isJust nd && getTileType (tileInFront m (fromJust nd) tileX tileY) /= Wall = Nothing
-                                                                                          | otherwise = nd
+handlePlayerMovement :: Maze -> Player -> Player
+handlePlayerMovement m (Player pic px py (Tile _ _ tt) d nd v sc li) = Player pic newPx newPy (Tile tileX tileY tt) dir nextDir v sc li
+                                                                       where
+                                                                             tileX = screenXToTile px
+                                                                             tileY = screenYToTile py
+                                                                             onTile = isOnTile px py tileX tileY
+                                                                             tileInFrontIsWall = tileInFrontIs m tileX tileY d Wall
+                                                                             dir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = fromJust nd
+                                                                                 | otherwise = d
+                                                                             sdv = screenDirectionVector dir
+                                                                             newPx | tileInFrontIsWall && onTile = px
+                                                                                   | otherwise = px + fromIntegral(fst sdv)
+                                                                             newPy | tileInFrontIsWall && onTile = py
+                                                                                   | otherwise = py + fromIntegral(snd sdv)
+                                                                             nextDir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = Nothing
+                                                                                     | otherwise = nd
+
+handleGhostMovement :: Maze -> Ghost -> Ghost
+handleGhostMovement m (Ghost gx gy gi gt (Tile _ _ tt) d nd v mo tl gct) = Ghost newGx newWGy gi gt (Tile tileX tileY tt) dir nextDir v mo tl gct
+                                                        where
+                                                             tileX = screenXToTile gx
+                                                             tileY = screenYToTile gy
+                                                             onTile = isOnTile gx gy tileX tileY
+                                                             tileInFrontIsWall = tileInFrontIs m tileX tileY d Wall
+                                                             dir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = fromJust nd
+                                                                 | otherwise = d
+                                                             sdv = screenDirectionVector dir
+                                                             newGx | tileInFrontIsWall && onTile = gx
+                                                                   | otherwise = gx + fromIntegral(fst sdv)
+                                                             newWGy | tileInFrontIsWall && onTile = gy
+                                                                    | otherwise = gy + fromIntegral(snd sdv)
+                                                             nextDir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = Nothing
+                                                                     | otherwise = nd
 
 tileInFront :: Maze -> Direction -> Int -> Int -> Tile
-tileInFront (Maze _ _ _ xs) North x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y - 1) xs
-tileInFront (Maze _ _ _ xs) South x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y + 1) xs
-tileInFront (Maze _ _ _ xs) East x y = head $ filter (\(Tile tx ty _) -> tx == x + 1 && ty == y) xs
-tileInFront (Maze _ _ _ xs) West x y = head $ filter (\(Tile tx ty _) -> tx == x - 1 && ty == y) xs
+tileInFront (Maze _ _ _ xs) d cx cy = head $ filter (\(Tile tx ty _) -> tx == (cx + fst v) && ty == (cy + snd v)) xs
+                                      where
+                                            v = tileDirectionVector d
 
 getTileType :: Tile -> TileType
-getTileType (Tile _ _ t) = t
+getTileType (Tile _ _ tt) = tt
 
-playerIsOnTile :: Player -> Tile -> Bool
-playerIsOnTile (Player _ px py _ _ _ _ _ _) (Tile x y _) = px == tileToScreenX x && py == tileToScreenY y
+tileInFrontIs :: Maze -> Int -> Int -> Direction -> TileType -> Bool
+tileInFrontIs m tx ty d tt = getTileType (tileInFront m d tx ty) == tt
 
-playerIsOnTileInt :: Player -> Int -> Int -> Bool
-playerIsOnTileInt (Player _ px py _ _ _ _ _ _) x y = px == tileToScreenX x && py == tileToScreenY y
+isOnTile :: Float -> Float -> Int -> Int -> Bool
+isOnTile sx sy tx ty = sx == tileToScreenX tx && sy == tileToScreenY ty
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g ) = GameState m s (Player pi px py pp d (Just North) v sc li) g
-inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g ) = GameState m s (Player pi px py pp d (Just South) v sc li) g
-inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g ) = GameState m s (Player pi px py pp d (Just East) v sc li) g
-inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g ) = GameState m s (Player pi px py pp d (Just West) v sc li) g
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g gt) = GameState m s (Player pi px py pp d (Just North) v sc li) g gt
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g gt) = GameState m s (Player pi px py pp d (Just South) v sc li) g gt
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g gt) = GameState m s (Player pi px py pp d (Just East) v sc li) g gt
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g gt) = GameState m s (Player pi px py pp d (Just West) v sc li) g gt
 inputKey _ gstate = gstate
+
 -- | Grid functions
 
 rect :: Float -> Float -> Float -> Float -> Picture
@@ -133,3 +148,15 @@ screenYToTile y = -(round $ (y - 7.5 + fromIntegral gridPaddingTop - screenOffse
                         halfScreenHeight = screenHeight `div` 2
                         screenOffsetY :: Float
                         screenOffsetY = fromIntegral halfScreenHeight - cellSize
+
+tileDirectionVector :: Direction -> (Int, Int)
+tileDirectionVector North = (0, -1)
+tileDirectionVector South = (0, 1)
+tileDirectionVector East = (1, 0)
+tileDirectionVector West = (-1, 0)
+
+screenDirectionVector :: Direction -> (Int, Int)
+screenDirectionVector North = (0, 1)
+screenDirectionVector South = (0, -1)
+screenDirectionVector East = (1, 0)
+screenDirectionVector West = (-1, 0)

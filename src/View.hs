@@ -6,10 +6,10 @@ import Controller
 import Graphics.Gloss
 
 getGhostIcon :: Ghost -> Picture
-getGhostIcon (Ghost gx gy gi _ _ _ _ _ _) = translate gx gy gi
+getGhostIcon (Ghost gx gy gi _ _ _ _ _ _ _ _) = translate gx gy gi
 
 view :: GameState -> IO Picture
-view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g) = do
+view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g _) = do
                                 let gridPicture = viewPure gs
                                 let pacman = translate px py pi
                                 let ghost1 = getGhostIcon $ head g
@@ -19,7 +19,7 @@ view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g) = do
                                 return (Pictures [gridPicture, pacman, ghost1, ghost2, ghost3, ghost4])
 
 drawTileGrid :: GameState -> Picture
-drawTileGrid (GameState (Maze w h l t) status p _) = Pictures $ (grid gridPaddingLeft gridPaddingTop w h) ++ filled t
+drawTileGrid (GameState (Maze w h l t) status p _ _) = Pictures $ (grid gridPaddingLeft gridPaddingTop w h) ++ filled t
                                                              where
                                                                   tileColor t | t == NormalTile = black
                                                                               | t == Wall = blue
