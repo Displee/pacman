@@ -16,7 +16,7 @@ view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g) = do
                                 let ghost2 = getGhostIcon $ g!!1
                                 let ghost3 = getGhostIcon $ g!!2
                                 let ghost4 = getGhostIcon $ g!!3
-                                return (Pictures [gridPicture, pacman, ghost1, ghost2, ghost3, ghost4]) -- TODO add ghosts
+                                return (Pictures [gridPicture, pacman, ghost1, ghost2, ghost3, ghost4])
 
 drawTileGrid :: GameState -> Picture
 drawTileGrid (GameState (Maze w h l t) status p _) = Pictures $ (grid gridPaddingLeft gridPaddingTop w h) ++ filled t
