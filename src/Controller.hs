@@ -9,63 +9,57 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate = return (direction' gstate)
+loop seconds gstate@(GameState m s p@(Player px py (Tile _ _ k) d nd v sc li) g) = do
+                                                                       -- TODO Ghosts
+                                                                       return (direction' gstate)
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gstate@(GameState m s (Player px py pt d nd v sc li) g) = return (inputKey e gstate)
 
 direction' :: GameState -> GameState
-direction' (GameState m s (Player px py (Tile x y k ) North nd v sc li) g ) = (GameState m s (Player px (py + 1) (Tile tileX tileY k) dir nextDir v sc li) g )
+direction' (GameState m s p@(Player px py (Tile x y tt) d nd v sc li) g ) = GameState m s (Player newPx newPy (Tile tileX tileY tt) dir nextDir v sc li) g
                                                                               where
-                                                                                    tileX = screenXToTile(px)
-                                                                                    tileY = screenYToTile(py)
-                                                                                    realScreenX = tileToScreenX(tileX)
-                                                                                    realScreenY = tileToScreenY(tileY)
-                                                                                    updateDirection = px == realScreenX || py == realScreenY
+                                                                                    tileX = screenXToTile px
+                                                                                    tileY = screenYToTile py
+                                                                                    frontTileX | d == West = tileX - 1
+                                                                                               | d == East = tileX + 1
+                                                                                               | otherwise = tileX
+                                                                                    frontTileY | d == North = tileY - 1
+                                                                                               | d == South = tileY + 1
+                                                                                               | otherwise = tileY
+                                                                                    updateDirection = playerIsOnTileInt p tileX tileY
+                                                                                    frontTileIsWall = getTileType (tileInFront m frontTileX frontTileY) == Wall
                                                                                     dir | updateDirection && isJust nd = fromJust nd
-                                                                                        | otherwise = North
+                                                                                        | otherwise = d
+                                                                                    newPx | frontTileIsWall && updateDirection = px
+                                                                                          | dir == West = px - 1
+                                                                                          | dir == East = px + 1
+                                                                                          | otherwise = px
+                                                                                    newPy | frontTileIsWall && updateDirection = py
+                                                                                          | dir == North = py + 1
+                                                                                          | dir == South = py - 1
+                                                                                          | otherwise = py
                                                                                     nextDir | updateDirection = Nothing
                                                                                             | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) South nd v sc li) g) = (GameState m s (Player px (py - 1) (Tile tileX tileY k) dir nextDir v sc li) g )
-                                                                              where
-                                                                                    tileX = screenXToTile(px)
-                                                                                    tileY = screenYToTile(py)
-                                                                                    realScreenX = tileToScreenX(tileX)
-                                                                                    realScreenY = tileToScreenY(tileY)
-                                                                                    updateDirection = px == realScreenX || py == realScreenY
-                                                                                    dir | updateDirection && isJust nd = fromJust nd
-                                                                                        | otherwise = South
-                                                                                    nextDir | updateDirection = Nothing
-                                                                                            | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) East nd v sc li) g) = (GameState m s (Player (px - 1) py (Tile tileX tileY k) dir nextDir v sc li) g )
-                                                                              where
-                                                                                    tileX = screenXToTile(px)
-                                                                                    tileY = screenYToTile(py)
-                                                                                    realScreenX = tileToScreenX(tileX)
-                                                                                    realScreenY = tileToScreenY(tileY)
-                                                                                    updateDirection = px == realScreenX || py == realScreenY
-                                                                                    dir | updateDirection && isJust nd = fromJust nd
-                                                                                        | otherwise = East
-                                                                                    nextDir | updateDirection = Nothing
-                                                                                            | otherwise = nd
-direction' (GameState m s (Player px py (Tile x y k ) West nd v sc li) g) = (GameState m s (Player (px + 1) py (Tile tileX tileY k) dir nextDir v sc li) g )
-                                                                              where
-                                                                                    tileX = screenXToTile(px)
-                                                                                    tileY = screenYToTile(py)
-                                                                                    realScreenX = tileToScreenX(tileX)
-                                                                                    realScreenY = tileToScreenY(tileY)
-                                                                                    updateDirection = px == realScreenX || py == realScreenY
-                                                                                    dir | updateDirection && isJust nd = fromJust nd
-                                                                                        | otherwise = West
-                                                                                    nextDir | updateDirection = Nothing
-                                                                                            | otherwise = nd
+
+tileInFront :: Maze -> Int -> Int -> Tile
+tileInFront (Maze _ _ _ xs) x y = head $ filter (\(Tile tx ty _) -> tx == x && ty == y) xs
+
+getTileType :: Tile -> TileType
+getTileType (Tile _ _ t) = t
+
+playerIsOnTile :: Player -> Tile -> Bool
+playerIsOnTile (Player px py _ _ _ _ _ _) (Tile x y _) = px == tileToScreenX x && py == tileToScreenY y
+
+playerIsOnTileInt :: Player -> Int -> Int -> Bool
+playerIsOnTileInt (Player px py _ _ _ _ _ _) x y = px == tileToScreenX x && py == tileToScreenY y
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just North) v sc li) g )
 inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just South) v sc li) g )
-inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just West) v sc li) g )
-inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just East) v sc li) g )
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just East) v sc li) g )
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player px py pp d nd v sc li) g ) = (GameState m s (Player px py pp d (Just West) v sc li) g )
 inputKey _ gstate = gstate
 -- | Grid functions
 
