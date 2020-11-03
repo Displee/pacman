@@ -18,7 +18,8 @@ data Direction = North | East | South | West deriving(Eq, Show)
 
 data GhostType = Pinky | Inky| Blinky | Clyde
 
-data Mode = Scatter | Chase | Frighten
+data Mode = Scatter | Chase | Frighten deriving(Eq)
+
 
 data Ghost = Ghost {
                       gx :: Float,
@@ -29,7 +30,8 @@ data Ghost = Ghost {
                       directionghost :: Direction,
                       velocityghost:: Int,
                       mode :: Mode ,
-                      targetLocation:: Tile
+                      targetLocationx:: Int,
+                      targetLocationy :: Int 
                       }
 data Tile = Tile {
       x :: Int,
