@@ -10,15 +10,15 @@ import Graphics.Gloss.Interface.IO.Game
 main :: IO ()
 main = do
           pacman <- loadBMP "data/ghost/pacmanright1.bmp"
-          g1Icon <- loadBMP "data/ghost/pinky.bmp"
+          g1Icon <- loadBMP "data/ghost/ghostorange.bmp"
           g2Icon <- loadBMP "data/ghost/pinky.bmp"
-          g3Icon <- loadBMP "data/ghost/pinky.bmp"
-          g4Icon <- loadBMP "data/ghost/pinky.bmp"
+          g3Icon <- loadBMP "data/ghost/ghostred.bmp"
+          g4Icon <- loadBMP "data/ghost/ghostblue.bmp"
           maze <- createMaze 55 35 0
-          let g1 = Ghost (tileToScreenX 14) (tileToScreenY 15) g1Icon Pinky (Tile 14 15 NormalTile) West Nothing 1 Scatter 1 1 startGhostCageTicks
-          let g2 = Ghost (tileToScreenX 14) (tileToScreenY 16) g2Icon Inky (Tile 14 16 NormalTile) West Nothing 1 Scatter 1 1 startGhostCageTicks
-          let g3 = Ghost (tileToScreenX 15) (tileToScreenY 15) g3Icon Blinky (Tile 15 15 NormalTile) West Nothing 1 Scatter 1 1 startGhostCageTicks
-          let g4 = Ghost (tileToScreenX 15) (tileToScreenY 16) g4Icon Clyde (Tile 15 16 NormalTile) West Nothing 1 Scatter 1 1 startGhostCageTicks
+          let g1 = Ghost (tileToScreenX 14) (tileToScreenY 15) g1Icon Pinky (Tile 14 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let g2 = Ghost (tileToScreenX 14) (tileToScreenY 16) g2Icon Inky (Tile 14 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let g3 = Ghost (tileToScreenX 15) (tileToScreenY 15) g3Icon Blinky (Tile 15 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let g4 = Ghost (tileToScreenX 15) (tileToScreenY 16) g4Icon Clyde (Tile 15 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
           let initialGameState = GameState maze NotPlaying (createPlayer pacman maze 15 14) [g1, g2, g3, g4] 0
           playIO (InWindow "PacMan" (screenWidth, screenHeight) (0, 0)) -- Or FullScreen
                         black            -- Background color

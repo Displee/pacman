@@ -27,6 +27,7 @@ data Ghost = Ghost {
                       ghostIcon :: Picture,
                       ghosttype :: GhostType,
                       posghost :: Tile,
+                      prevloc :: Direction,
                       directionghost :: Direction,
                       nextGhostDirection :: Maybe Direction,
                       velocityghost:: Int,
