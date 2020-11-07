@@ -9,19 +9,14 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate@(GameState m s p@(Player pi px py t d nd v sc li) g gt) = do
-loop seconds (GameState m s p@(Player pi px py t d nd v sc li) g gt) = do
-                                             let player = handlePlayerMovement m p
-                                             let updatedMazePlayer = handleScorePlayer m player
-                                             let updatedMaze = fst updatedMazePlayer
-                                             let updatedPlayer = snd updatedMazePlayer
+loop seconds (GameState m s p@(Player pi px py t d nd v sc li) g gt) = do                                             
                                              let targetedGhosts = targetLocation' d t g
                                              let dirghosts = directionGhosts targetedGhosts m
                                              let ghosts = map (handleGhostMovement m) dirghosts
                                              let player = handlePlayerMovement m p
-
-
-                                             return (GameState m s player ghosts (gt + 1))
+                                             let updatedMazePlayer = handleScorePlayer m player
+                                             let updatedMaze = fst updatedMazePlayer
+                                             let updatedPlayer = snd updatedMazePlayer
                                              let ghosts = map (handleGhostMovement updatedMaze) targetedGhosts
                                              return $ GameState updatedMaze s updatedPlayer ghosts (gt + 1)
 
@@ -165,7 +160,7 @@ isNearGhost :: Float -> Float -> [Ghost] -> Bool
 isNearGhost _ _ [] = False
 isNearGhost sx sy (x:xs) = (sx - fst pos < nearDistance && sy - snd pos < nearDistance) || isNearGhost sx sy xs
                            where
-                                 pos = (\(Ghost gx gy _ _ _ _ _ _ _ _ _ _) -> (gx, gy)) x
+                                 pos = (\(Ghost gx gy _ _ _ _ _ _ _ _ _ _ _) -> (gx, gy)) x
                                  nearDistance = 5
 
 tileScore :: Tile -> Int
