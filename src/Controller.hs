@@ -11,13 +11,12 @@ import Data.Maybe (fromJust, isJust)
 loop :: Float -> GameState -> IO GameState
 loop seconds (GameState m s p@(Player pi px py t d nd v sc li) g gt) = do                                             
                                              let targetedGhosts = targetLocation' d t g
-                                             let dirghosts = directionGhosts targetedGhosts m
-                                             let ghosts = map (handleGhostMovement m) dirghosts
                                              let player = handlePlayerMovement m p
                                              let updatedMazePlayer = handleScorePlayer m player
                                              let updatedMaze = fst updatedMazePlayer
                                              let updatedPlayer = snd updatedMazePlayer
-                                             let ghosts = map (handleGhostMovement updatedMaze) targetedGhosts
+                                             let dirghosts = directionGhosts targetedGhosts updatedMaze
+                                             let ghosts = map (handleGhostMovement m) dirghosts
                                              return $ GameState updatedMaze s updatedPlayer ghosts (gt + 1)
 
 allPosDirec :: [Direction]
