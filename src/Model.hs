@@ -39,7 +39,7 @@ data Tile = Tile {
       x :: Int,
       y :: Int,
       tileType :: TileType
-                    } deriving(Show)
+                    } deriving(Show, Eq)
 
 
 data Maze = Maze {

@@ -9,11 +9,14 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gstate@(GameState m s p@(Player pi px py t d nd v sc li) g gt) = do
+loop seconds (GameState m s p@(Player pi px py t d nd v sc li) g gt) = do
                                              let player = handlePlayerMovement m p
+                                             let updatedMazePlayer = handleScorePlayer m player
+                                             let updatedMaze = fst updatedMazePlayer
+                                             let updatedPlayer = snd updatedMazePlayer
                                              let targetedGhosts = targetLocation' d t g
-                                             let ghosts = map (handleGhostMovement m) targetedGhosts
-                                             return (GameState m s player ghosts (gt + 1))
+                                             let ghosts = map (handleGhostMovement updatedMaze) targetedGhosts
+                                             return $ GameState updatedMaze s updatedPlayer ghosts (gt + 1)
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
@@ -52,6 +55,19 @@ handleGhostMovement m (Ghost gx gy gi gt (Tile _ _ tt) d nd v mo tlx tly gct) = 
                                                                     | otherwise = gy + fromIntegral(snd sdv)
                                                              nextDir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = Nothing
                                                                      | otherwise = nd
+
+handleScorePlayer :: Maze -> Player -> (Maze, Player)
+handleScorePlayer m@(Maze w h level tiles) p@(Player i px py (Tile tx ty tt) d nd v s l) = (Maze w h level updatedTiles, Player i px py (Tile tx ty tt) d nd v playerScore l)
+                                                                  where
+                                                                        tif = tileInFront m d tx ty
+                                                                        tift = getTileType tif
+                                                                        nearObjective = isNearTile px py tif && (tift == Dot || tift == FlashingDot)
+                                                                        updatedTiles | nearObjective = modifyTileType tif NormalTile : oldTiles
+                                                                                     | otherwise = tiles
+                                                                                     where
+                                                                                           oldTiles = filter (/= tif) tiles
+                                                                        playerScore | nearObjective = s + tileScore tif
+                                                                                    | otherwise = s
 
 targetLocation' :: Direction-> Tile -> [Ghost] -> [Ghost] 
 targetLocation' _ _ []= []
@@ -107,6 +123,25 @@ tileInFrontIs m tx ty d tt = getTileType (tileInFront m d tx ty) == tt
 
 isOnTile :: Float -> Float -> Int -> Int -> Bool
 isOnTile sx sy tx ty = sx == tileToScreenX tx && sy == tileToScreenY ty
+
+isNearTile :: Float -> Float -> Tile -> Bool
+isNearTile sx sy (Tile x y _) = x == screenXToTile sx && y == screenYToTile sy
+
+isNearGhost :: Float -> Float -> [Ghost] -> Bool
+isNearGhost _ _ [] = False
+isNearGhost sx sy (x:xs) = (sx - fst pos < nearDistance && sy - snd pos < nearDistance) || isNearGhost sx sy xs
+                           where
+                                 pos = (\(Ghost gx gy _ _ _ _ _ _ _ _ _ _) -> (gx, gy)) x
+                                 nearDistance = 5
+
+tileScore :: Tile -> Int
+tileScore (Tile _ _ NormalTile) = 0
+tileScore (Tile _ _ Wall) = 0
+tileScore (Tile _ _ Dot) = 10
+tileScore (Tile _ _ FlashingDot) = 50
+
+modifyTileType :: Tile -> TileType -> Tile
+modifyTileType (Tile tx ty _) = Tile tx ty
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi px py pp d nd v sc li) g gt) = GameState m s (Player pi px py pp d (Just North) v sc li) g gt

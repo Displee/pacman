@@ -34,7 +34,7 @@ createMaze w h l = do
                       return (Maze w h l (gridMaker 1 1 levelContent))
 
 createPlayer :: Picture -> Maze -> Int -> Int -> Player
-createPlayer icon m tx ty = Player icon (tileToScreenX tx) (tileToScreenY ty) tile West Nothing undefined undefined undefined
+createPlayer icon m tx ty = Player icon (tileToScreenX tx) (tileToScreenY ty) tile West Nothing 1 0 3
                             where
                                   tile :: Tile
                                   tile = Tile tx ty NormalTile --TODO Get tile from maze
