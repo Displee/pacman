@@ -7,13 +7,13 @@ import Data.Fixed (mod')
 import GridUtils
 
 getGhostIcon :: Ghost -> Picture
-getGhostIcon (Ghost gx gy gi _ _ _ _ _ _  _ _ _ _ _ _) = translate gx gy gi
+getGhostIcon (Ghost gx gy gi _ _ _ _ _ _ _  _ _ _ _ _ _) = translate gx gy gi
 
 getGhostIcon' :: Ghost -> Picture -> Picture
-getGhostIcon' (Ghost gx gy gi _ _ _ _ _ _ _ _ _ _ _ _) = translate gx gy
+getGhostIcon' (Ghost gx gy gi _ _ _ _ _ _ _ _ _ _ _ _ _) = translate gx gy
 
 view :: GameState -> IO Picture
-view gs@(GameState _ status (Player pi pis px py (Tile x y _) d _ _ _ _ ) g gt _) = do
+view gs@(GameState _ status (Player pi pis _ px py (Tile x y _) d _ _ _ _ _) g gt _) = do
                                 let gridPicture = drawTileGrid gs
                                 let pacman = translate px py (picturechanger pis d status gt)
                                 let pinkghostpic = ghostchanger (takeghost Pinky g) status gt
@@ -36,7 +36,7 @@ picturechanger icons d status gt | status == Playing = case (gt `div` 3) `mod'` 
                                  | otherwise = takesolid icons
 
 ghostchanger :: Ghost -> GameStatus -> Int -> Picture
-ghostchanger (Ghost gx gy gi icons _ _ _ d _  _ Frightenwhite _ _ _ ft) status _ | status == Playing = case (ft `div` 6) `mod'` 4 of
+ghostchanger (Ghost gx gy gi icons _ _ _ _ d _  _ Frightenwhite _ _ _ ft) status _ | status == Playing = case (ft `div` 6) `mod'` 4 of
                                                                                            0 -> takescatter icons 2 Blue
                                                                                            1 -> takescatter icons 1 White
                                                                                            2 -> takescatter icons 1 Blue
@@ -44,14 +44,14 @@ ghostchanger (Ghost gx gy gi icons _ _ _ d _  _ Frightenwhite _ _ _ ft) status _
 
                                                                            |otherwise= takesolid icons
 
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Frighten _ _ _ ft) status _ | (ft `div` 3) `mod'` 2 == 0 && status == Playing = takescatter gis 1 Blue
+ghostchanger (Ghost gx gy gi gis _ _ _ _ d _  _ Frighten _ _ _ ft) status _ | (ft `div` 3) `mod'` 2 == 0 && status == Playing = takescatter gis 1 Blue
                                                                           | otherwise = takescatter gis 2 Blue
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _ _) status gt | (gt `div` 3) `mod'` 2 == 0 && status == Playing = takepic d 1 gis
+ghostchanger (Ghost gx gy gi gis _ _ _ _ d _  _ _ _ _ _ _) status gt | (gt `div` 3) `mod'` 2 == 0 && status == Playing = takepic d 1 gis
                                                                    | otherwise = takepic d 2 gis
 
 
 takeghost :: GhostType -> [Ghost] -> Ghost
-takeghost ghost (g@(Ghost _ _ _ _ name _ _ _ _ _ _ _ _ _ _):gs) | name == ghost = g
+takeghost ghost (g@(Ghost _ _ _ _ _ name _ _ _ _ _ _ _ _ _ _):gs) | name == ghost = g
                                                                 | otherwise      =  takeghost ghost gs
 
 takesolid :: [Animation] -> Picture

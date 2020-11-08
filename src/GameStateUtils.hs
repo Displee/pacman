@@ -15,7 +15,9 @@ createPlayer :: p -> Int -> Int -> IO Player
 createPlayer m tx ty = do
                           icon <- loadBMP "data/ghost/pacmanright1.bmp"
                           icons  <- pacmanviewer
-                          return $ Player icon icons (tileToScreenX tx) (tileToScreenY ty) (Tile tx ty NormalTile) West Nothing 1 0 3
+                          return $ Player icon icons spawnTile (tileToScreenX tx) (tileToScreenY ty) spawnTile West Nothing 1 0 3 0
+                                 where
+                                       spawnTile = Tile tx ty NormalTile
 
 readGhost :: Int -> Int -> Char -> [Char] -> IO (Maybe Ghost)
 readGhost _ _ _ [] = return Nothing
@@ -27,19 +29,27 @@ createGhost :: Char -> Int -> Int -> IO (Maybe Ghost)
 createGhost 'P' tx ty = do
                         pinkyg <- loadBMP "data/PinkGhost/GhostPinkWest1.bmp"
                         pinkghosticons <- pinkGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) pinkyg pinkghosticons Pinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) pinkyg pinkghosticons spawnTile Pinky spawnTile West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                               where
+                                     spawnTile = Tile tx ty NormalTile
 createGhost 'I' tx ty = do
                         inkyg <- loadBMP "data/ghost/pinky.bmp"
                         blueghosticons <- blueGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) inkyg blueghosticons Inky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) inkyg blueghosticons spawnTile Inky spawnTile West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                               where
+                                     spawnTile = Tile tx ty NormalTile
 createGhost 'B' tx ty = do
                         blinkyg <- loadBMP "data/ghost/ghostred.bmp"
                         redghosticons <- redGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) blinkyg redghosticons Blinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) blinkyg redghosticons spawnTile Blinky spawnTile West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                               where
+                                     spawnTile = Tile tx ty NormalTile
 createGhost 'C' tx ty = do
                         clydeg <- loadBMP "data/ghost/ghostblue.bmp"
                         yellowghosticons <- yellowGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) clydeg yellowghosticons Clyde (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) clydeg yellowghosticons spawnTile Clyde spawnTile West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
+                               where
+                                     spawnTile = Tile tx ty NormalTile
 createGhost _ tx ty = return Nothing
 
 scattermode :: IO [Animation]

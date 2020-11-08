@@ -5,6 +5,12 @@ import Graphics.Gloss.Data.Picture (Picture)
 startTimeGameTicks :: Int
 startTimeGameTicks = 60 * 4
 
+respawnTick :: Int
+respawnTick = 60 * 4
+
+restartLevelTicks :: Int
+restartLevelTicks = 60 * 4
+
 data GameStatus = Starting | Playing | Paused | GameOver deriving (Eq, Show)
 
 data Animation = Animation Direction Int Picture | Solid Picture  | Scattermode GhostColor Int Picture  deriving Eq
@@ -32,6 +38,7 @@ data Ghost = Ghost {
                       gy :: Float,
                       ghostIcon :: Picture,
                       ghostIcons :: [Animation],
+                      ghostSpawnTile :: Tile,
                       ghosttype :: GhostType,
                       posghost :: Tile,
                       prevloc :: Direction,
@@ -61,6 +68,7 @@ data Maze = Maze {
 data Player = Player {
                       playerIcon :: Picture,
                       playerIcons :: [Animation],
+                      playerSpawnTile :: Tile,
                       playerX :: Float,
                       playerY :: Float,
                       posplayer :: Tile,
@@ -68,7 +76,8 @@ data Player = Player {
                       nextPlayerDirection :: Maybe Direction,
                       velocity :: Int,
                       score :: Int,
-                      lifes :: Int
+                      lifes :: Int,
+                      deadTick :: Int
                       }
 
 
