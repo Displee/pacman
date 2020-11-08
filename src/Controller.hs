@@ -11,11 +11,11 @@ import System.Random (randomRIO)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa px py t d nd v sc li) g gt) = case s of
+loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa px py t d nd v sc li) g gt jt) = case s of
                                              Starting  -> do
                                                              let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
-                                                             return $ GameState m status (Player pi pa px py t d nd v sc li) g (gt + 1)
+                                                             return $ GameState m status (Player pi pa px py t d nd v sc li) g (gt + 1) jt
                                              Playing   -> do
                                                              let targetedGhosts = targetLocation' d t g
                                                              let player = handlePlayerMovement m p
@@ -28,7 +28,7 @@ loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa px py t d nd v
                                                              let ghosts = map (handleGhostMovement m) dirghosts
                                                              let status | isNearGhost px py ghosts = Paused
                                                                         | otherwise = s
-                                                             let update = frightenmodeexc (GameState updatedMaze status updatedPlayer ghosts gt)
+                                                             let update = frightenmodeexc (GameState updatedMaze status updatedPlayer ghosts gt jt)
                                                              return $ update
                                              Paused    -> do
                                                              -- TODO Player died, stop processing movement and respawn player and ghosts
@@ -60,10 +60,10 @@ randomnumber k = do randomRIO (0, k)
 
 validmoves :: Maze -> Ghost-> [Direction] -> [Direction]
 validmoves _  _ [] = []
-validmoves maze  g@(Ghost gx gy gi gis gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d==North && (not(pl == South)) && (not(dg == South))  &&  isOnTile gx gy gtx gty && not  (tileInFrontIs maze gtx gty North Wall)    = North: validmoves maze g ds
-                                                                                                      | d==South&& (not(pl == North)) && (not(dg == North)) &&  isOnTile gx gy gtx gty && not  (tileInFrontIs maze gtx gty South Wall)     = South: validmoves maze g ds
-                                                                                                      | d==West && (not(pl == East) ) && (not(dg == East))  &&   isOnTile gx gy gtx gty && not  (tileInFrontIs maze gtx gty West Wall)     = West : validmoves maze g ds
-                                                                                                      | d==East && (not(pl == West))  && (not(dg == West))   &&   isOnTile gx gy gtx gty && not  (tileInFrontIs maze gtx gty East Wall)    = East : validmoves maze g ds
+validmoves maze  g@(Ghost gx gy gi gis gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d==North && (not(pl == South)) && (not(dg == South))  &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty North)    = North: validmoves maze g ds
+                                                                                                      | d==South&& (not(pl == North)) && (not(dg == North)) &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty South)     = South: validmoves maze g ds
+                                                                                                      | d==West && (not(pl == East) ) && (not(dg == East))  &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty West)     = West : validmoves maze g ds
+                                                                                                      | d==East && (not(pl == West))  && (not(dg == West))   &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty East)    = East : validmoves maze g ds
                                                                                                       |otherwise =  validmoves maze g ds
 
 
@@ -71,7 +71,7 @@ validmoves maze  g@(Ghost gx gy gi gis gt posg@(Tile gtx gty tt) pl dg ngd vg m 
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate@(GameState m s (Player _ _ px py pt d nd v sc li) g gt) = return (inputKey e gstate)
+input e gstate@(GameState m s (Player _ _ px py pt d nd v sc li) g gt jt) = return (inputKey e gstate)
 
 handlePlayerMovement :: Maze -> Player -> Player
 handlePlayerMovement m (Player pic pi px py (Tile _ _ tt) d nd v sc li) = Player pic pi newPx newPy (Tile tileX tileY tt) dir nextDir v sc li
@@ -79,15 +79,15 @@ handlePlayerMovement m (Player pic pi px py (Tile _ _ tt) d nd v sc li) = Player
                                                                              tileX = screenXToTile px
                                                                              tileY = screenYToTile py
                                                                              onTile = isOnTile px py tileX tileY
-                                                                             tileInFrontIsWall = tileInFrontIs m tileX tileY d Wall
-                                                                             dir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = fromJust nd
+                                                                             tileInFrontIsB = tileInFrontIsBlocked m tileX tileY d
+                                                                             dir | onTile && isJust nd && not (tileInFrontIsBlocked m tileX tileY (fromJust nd)) = fromJust nd
                                                                                  | otherwise = d
                                                                              sdv = screenDirectionVector dir
-                                                                             newPx | tileInFrontIsWall && onTile = px
+                                                                             newPx | tileInFrontIsB && onTile = px
                                                                                    | otherwise = px + fromIntegral(fst sdv)
-                                                                             newPy | tileInFrontIsWall && onTile = py
+                                                                             newPy | tileInFrontIsB && onTile = py
                                                                                    | otherwise = py + fromIntegral(snd sdv)
-                                                                             nextDir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = Nothing
+                                                                             nextDir | onTile && isJust nd && not (tileInFrontIsBlocked m tileX tileY (fromJust nd)) = Nothing
                                                                                      | otherwise = nd
 
 handleGhostMovement :: Maze -> Ghost -> Ghost
@@ -96,15 +96,15 @@ handleGhostMovement m (Ghost gx gy gi gis gt (Tile _ _ tt) pl d nd v mo tlx tly 
                                                              tileX = screenXToTile gx
                                                              tileY = screenYToTile gy
                                                              onTile = isOnTile gx gy tileX tileY
-                                                             tileInFrontIsWall = tileInFrontIs m tileX tileY d Wall
-                                                             dir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = fromJust nd
+                                                             tileInFrontIsB= tileInFrontIsBlocked m tileX tileY d
+                                                             dir | onTile && isJust nd && not (tileInFrontIsBlocked m tileX tileY (fromJust nd)) = fromJust nd
                                                                  | otherwise = d
                                                              sdv = screenDirectionVector dir
-                                                             newGx | tileInFrontIsWall && onTile = gx
+                                                             newGx | tileInFrontIsB && onTile = gx
                                                                    | otherwise = gx + fromIntegral(fst sdv)
-                                                             newWGy | tileInFrontIsWall && onTile = gy
+                                                             newWGy | tileInFrontIsB && onTile = gy
                                                                     | otherwise = gy + fromIntegral(snd sdv)
-                                                             nextDir | onTile && isJust nd && not (tileInFrontIs m tileX tileY (fromJust nd) Wall) = Nothing
+                                                             nextDir | onTile && isJust nd && not (tileInFrontIsBlocked m tileX tileY (fromJust nd)) = Nothing
                                                                      | otherwise = nd
 
 handleScorePlayer :: Maze -> Player -> (Maze, Player)
@@ -169,8 +169,8 @@ tileInFront (Maze _ _ _ xs) d cx cy = head $ filter (\(Tile tx ty _) -> tx == (c
 getTileType :: Tile -> TileType
 getTileType (Tile _ _ tt) = tt
 
-tileInFrontIs :: Maze -> Int -> Int -> Direction -> TileType -> Bool
-tileInFrontIs m tx ty d tt = getTileType (tileInFront m d tx ty) == tt
+tileInFrontIsBlocked :: Maze -> Int -> Int -> Direction -> Bool
+tileInFrontIsBlocked m tx ty d = tift == Wall || tift == JailDoor where tift = getTileType (tileInFront m d tx ty)
 
 isOnTile :: Float -> Float -> Int -> Int -> Bool
 isOnTile sx sy tx ty = sx == tileToScreenX tx && sy == tileToScreenY ty
@@ -188,9 +188,16 @@ isNearGhost sx sy (x:xs) = (sxDiff < nearDistance && sxDiff > (-nearDistance) &&
                                  syDiff = sy - snd pos
                                  nearDistance = 5
 
+isInJail :: (Tile, Tile) -> Ghost -> Bool
+isInJail (Tile topLeftX topLeftY _, Tile bottomRightX bottomRightY _) (Ghost _ _ _ _ _ (Tile tx ty _) _ _ _ _ _ _ _ _ _) = tx >= topLeftX && tx <= bottomRightX && ty >= topLeftY && ty <= bottomRightY
+
+removeJailDoorsFromMaze :: Maze -> Maze
+removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ filter (\(Tile _ _ tt) -> tt /= JailDoor) xs
+
 tileScore :: Tile -> Int
 tileScore (Tile _ _ NormalTile) = 0
 tileScore (Tile _ _ Wall) = 0
+tileScore (Tile _ _ JailDoor) = 0
 tileScore (Tile _ _ Dot) = 10
 tileScore (Tile _ _ FlashingDot) = 50
 
@@ -198,10 +205,10 @@ modifyTileType :: Tile -> TileType -> Tile
 modifyTileType (Tile tx ty _) = Tile tx ty
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt) = GameState m s (Player pi pis px py pp d (Just North) v sc li) g gt
-inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt) = GameState m s (Player pi pis px py pp d (Just South) v sc li) g gt
-inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt) = GameState m s (Player pi pis px py pp d (Just East) v sc li) g gt
-inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt) = GameState m s (Player pi pis px py pp d (Just West) v sc li) g gt
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt jt) = GameState m s (Player pi pis px py pp d (Just North) v sc li) g gt jt
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt jt) = GameState m s (Player pi pis px py pp d (Just South) v sc li) g gt jt
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt jt) = GameState m s (Player pi pis px py pp d (Just East) v sc li) g gt jt
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt jt) = GameState m s (Player pi pis px py pp d (Just West) v sc li) g gt jt
 inputKey _ gstate = gstate
 
 tileDirectionVector :: Direction -> (Int, Int)
@@ -244,11 +251,11 @@ incrementghosttick [] = []
 incrementghosttick  ((Ghost gx gy gi gis gt posg pl dg ngd vg mode tlx tly ct ft): gs) =  Ghost gx gy gi gis gt posg pl dg ngd vg mode tlx tly ct (ft+1) : incrementghosttick gs
 
 frightenmodeexc :: GameState -> GameState
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis typ posg pl dg ngd vg Frighten tlx tly ct ft):gs) gt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt)
-                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt)
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis typ posg pl dg ngd vg Frightenwhite tlx tly ct ft):gs) gt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1))                                        
-                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt)
-frightenmodeexc  (GameState m s p g gt) = (GameState m s p g (gt+1)) 
+frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis typ posg pl dg ngd vg Frighten tlx tly ct ft):gs) gt jt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt jt)
+                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt)
+frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis typ posg pl dg ngd vg Frightenwhite tlx tly ct ft):gs) gt jt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1) jt)
+                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt)
+frightenmodeexc  (GameState m s p g gt jt) = (GameState m s p g (gt+1) jt)
 
 
 frigthenmodecheck :: Maze -> Player -> [Ghost] -> [Ghost]
@@ -272,4 +279,5 @@ createGameState level = do
                           blinky <- readGhost 1 1 'B' levelContent
                           clyde <- readGhost 1 1 'C' levelContent
                           let ghosts = map fromJust [pinky, inky, blinky, clyde]
-                          return (GameState maze Starting player ghosts 0)
+                          let jailTiles = findJailPositions 1 1 (Tile 0 0 NormalTile, Tile 0 0 NormalTile) levelContent
+                          return (GameState maze Starting player ghosts 0 jailTiles)

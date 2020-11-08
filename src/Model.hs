@@ -16,11 +16,11 @@ data GameState = GameState {
       status :: GameStatus,
       player :: Player,
       ghosts :: [Ghost],
-      gameTick :: Int
+      gameTick :: Int,
+      jailTiles :: (Tile, Tile)
   }
 
-data TileType = Dot | FlashingDot | NormalTile | Wall
-                  deriving(Eq, Show)
+data TileType = Dot | FlashingDot | NormalTile | Wall | JailDoor deriving(Eq, Show)
 data Direction = North | East | South | West deriving(Eq, Show)
 
 data GhostType = Pinky | Inky| Blinky | Clyde deriving Eq
@@ -55,7 +55,7 @@ data Maze = Maze {
       width  :: Int,
       height :: Int,
       level  :: Int,
-      tiles  :: [Tile]                  
+      tiles  :: [Tile]
                   }
 
 data Player = Player {

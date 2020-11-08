@@ -36,13 +36,14 @@ fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegr
                                 screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
 
 drawTileGrid :: GameState -> Picture
-drawTileGrid (GameState (Maze w h l t) status p _ _) = Pictures $ grid gridPaddingLeft gridPaddingTop w h ++ filled t
+drawTileGrid (GameState (Maze w h l t) status p _ _ _) = Pictures $ grid gridPaddingLeft gridPaddingTop w h ++ filled t
                                                              where
                                                                   fillTile :: Tile -> Picture
                                                                   fillTile (Tile x y Dot) = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y black, translate (tileToScreenX x) (tileToScreenY y) (Color yellow $ Graphics.Gloss.circleSolid 3)]
                                                                   fillTile (Tile x y FlashingDot) = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y black, translate (tileToScreenX x) (tileToScreenY y) (Color white $ Graphics.Gloss.circleSolid 6)]
                                                                   fillTile (Tile x y NormalTile) = fillCellSmart gridPaddingLeft gridPaddingTop x y black
                                                                   fillTile (Tile x y Wall) = fillCellSmart gridPaddingLeft gridPaddingTop x y blue
+                                                                  fillTile (Tile x y JailDoor) = fillCellSmart gridPaddingLeft gridPaddingTop x y orange
                                                                   filled xs = map fillTile xs
                                                                   
 gridMaker :: Int -> Int ->  [Char]-> [ Tile]
@@ -53,6 +54,7 @@ gridMaker x y (n:ns) | n == '\n' = gridMaker 1 (y+1) ns
 gridMaker' :: Int -> Int -> Char -> Tile
 gridMaker' x y '.'  = Tile {x= x ,y= y, tileType= Dot}
 gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
+gridMaker' x y '-'  = Tile {x= x ,y= y, tileType= JailDoor}
 gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
 gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
 

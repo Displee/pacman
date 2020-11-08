@@ -133,3 +133,10 @@ redGhostviewer = do
           return(((Animation North 1 redNorth1):(Animation North 2 redNorth2):(Animation South 1 redSouth1):
                (Animation South 2 redSouth2): (Animation West 1 redWest1):(Animation West 2 redWest2):
                (Animation East 1 redEast1) :(Animation East 2 redEast2)  : [])++ scatterghosts)
+
+findJailPositions :: Int -> Int -> (Tile, Tile) -> [Char] -> (Tile, Tile)
+findJailPositions _ _ _ [] = (Tile 0 0 NormalTile, Tile 0 0 NormalTile)
+findJailPositions tx ty (accX, accY) (n:ns) | n == '\n' = findJailPositions 1 (ty + 1) (accX, accY) ns
+                                            | n == 'X' = findJailPositions (tx + 1) ty (Tile tx ty NormalTile, accY) ns
+                                            | n == 'Y' = (accX, Tile tx ty NormalTile)
+                                            | otherwise = findJailPositions (tx + 1) ty (accX, accY) ns
