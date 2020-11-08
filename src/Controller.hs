@@ -150,7 +150,7 @@ targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _):g
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _):gs) jt  = targetBlinky d x y g : targetLocation' d t gs jt
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Clyde _ _ _ _ _ _ _ _ _ _):gs)  jt  = targetClyde d x y g jt: targetLocation' d t gs jt
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _):gs)      jt  = targetPinky d x y g jt: targetLocation' d t gs jt
- 
+
 --The target location of Blinky is the location of Pac-man.
 targetBlinky :: Direction->Int -> Int -> Ghost -> Ghost
 targetBlinky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) | m == Chase = Ghost gx gy gi gis gst gt pg pl dg nd vg m x y ct ft
@@ -236,7 +236,7 @@ removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ convertedJailDoorTiles ++
                                           where
                                                 jailDoorTiles = filter (\(Tile _ _ tt) -> tt == JailDoor) xs
                                                 convertedJailDoorTiles = map (\(Tile tx ty _) -> Tile tx ty NormalTile) jailDoorTiles
-                                                
+
 tileScore :: Tile -> Int
 tileScore (Tile _ _ NormalTile) = 0
 tileScore (Tile _ _ Wall) = 0
@@ -345,7 +345,13 @@ takeghostloc ghost (g@(Ghost _ _ _ _ _ name t _ _ _ _ _ _ _ _ _):gs) | name == g
 createGameState :: Int -> IO GameState
 createGameState level = do
                           levelContent <- readFile ("./data/level_" ++ show level ++ ".txt")
-                          let maze = Maze 55 35 level (gridMaker 1 1 levelContent)
+                          let maze = Maze (fst mt + 1) (snd mt + 1) level tiles
+                                     where
+                                           tiles = gridMaker 1 1 levelContent
+                                           maxTile acc [] = acc
+                                           maxTile acc@(accx, accy) ((Tile xx xy __):xs) | xx >= accx && xy >= accy = maxTile (xx, xy) xs
+                                                                                         | otherwise = maxTile acc xs
+                                           mt = maxTile (0, 0) tiles
                           let playerPosition = (\(Tile tx ty _) -> (tx, ty)) $ readPlayer 1 1 levelContent
                           player <- uncurry (createPlayer maze) playerPosition
                           pinky <- readGhost 1 1 'P' levelContent

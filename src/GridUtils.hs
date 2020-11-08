@@ -36,7 +36,7 @@ fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegr
                                 screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
 
 drawTileGrid :: GameState -> Picture
-drawTileGrid (GameState (Maze w h l t) status p _ _ _ _) = Pictures $ grid gridPaddingLeft gridPaddingTop w h ++ filled t
+drawTileGrid (GameState (Maze w h l t) status p _ _ _ _) = Pictures $ filled t
                                                              where
                                                                   fillTile :: Tile -> Picture
                                                                   fillTile (Tile x y Dot) = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y black, translate (tileToScreenX x) (tileToScreenY y) (Color yellow $ Graphics.Gloss.circleSolid 3)]
@@ -57,10 +57,6 @@ gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
 gridMaker' x y '-'  = Tile {x= x ,y= y, tileType= JailDoor}
 gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
 gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
-
-
--- I'm not sure where the 7 and 7.5 come from, I think it has to do with the bmp dimensions of pacman which is 12x13
--- However these two values are used to show pacman in the middle of the tile
 
 tileToScreenX :: Int -> Float
 tileToScreenX x = fromIntegral gridPaddingLeft + screenOffsetX + (cellSize * fromIntegral x) + 7
