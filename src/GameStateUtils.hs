@@ -27,19 +27,19 @@ createGhost :: Char -> Int -> Int -> IO (Maybe Ghost)
 createGhost 'P' tx ty = do
                         pinkyg <- loadBMP "data/PinkGhost/GhostPinkWest1.bmp"
                         pinkghosticons <- pinkGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) pinkyg pinkghosticons Pinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) pinkyg pinkghosticons Pinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
 createGhost 'I' tx ty = do
                         inkyg <- loadBMP "data/ghost/pinky.bmp"
                         blueghosticons <- blueGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) inkyg blueghosticons Inky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) inkyg blueghosticons Inky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
 createGhost 'B' tx ty = do
                         blinkyg <- loadBMP "data/ghost/ghostred.bmp"
                         redghosticons <- redGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) blinkyg redghosticons Blinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) blinkyg redghosticons Blinky (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
 createGhost 'C' tx ty = do
                         clydeg <- loadBMP "data/ghost/ghostblue.bmp"
                         yellowghosticons <- yellowGhostviewer
-                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) clydeg yellowghosticons Clyde (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+                        return $ Just $ Ghost (tileToScreenX tx) (tileToScreenY ty) clydeg yellowghosticons Clyde (Tile tx ty NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks startGhostCageTicks
 createGhost _ tx ty = return Nothing
 
 scattermode :: IO [Animation]
