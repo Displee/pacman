@@ -52,8 +52,8 @@ createGhost 'C' tx ty = do
                                      spawnTile = Tile tx ty NormalTile
 createGhost _ tx ty = return Nothing
 
-scattermode :: IO [Animation]
-scattermode = do
+chaseMode :: IO [Animation]
+chaseMode = do
           scatterblue1 <- loadBMP "data/ScatterGhost/ScatterBlue1.bmp"
           scatterblue2 <- loadBMP "data/ScatterGhost/ScatterBlue2.bmp"
           scatterwhite1 <- loadBMP "data/ScatterGhost/ScatterWhite1.bmp"
@@ -86,7 +86,7 @@ pinkGhostviewer = do
           pinkWest2  <- loadBMP "data/PinkGhost/GhostPinkWest2.bmp"
           pinkEast1  <- loadBMP "data/PinkGhost/GhostPinkEast1.bmp"
           pinkEast2  <- loadBMP "data/PinkGhost/GhostPinkEast2.bmp"
-          scatterghosts <- scattermode
+          scatterghosts <- chaseMode
 
           return(((Animation North 1 pinkNorth1):(Animation North 2 pinkNorth2):(Animation South 1 pinkSouth1):
                (Animation South 2 pinkSouth2): (Animation West 1 pinkWest1):(Animation West 2 pinkWest2):
@@ -102,7 +102,7 @@ blueGhostviewer = do
           blueWest2  <- loadBMP "data/GhostBlue/BlueGhostWest2.bmp"
           blueEast1  <- loadBMP "data/GhostBlue/BlueGhostEast1.bmp"
           blueEast2  <- loadBMP "data/GhostBlue/BlueGhostEast2.bmp"
-          scatterghosts <- scattermode
+          scatterghosts <- chaseMode
 
 
           return(((Animation North 1 blueNorth1):(Animation North 2 blueNorth2):(Animation South 1 blueSouth1):
@@ -120,7 +120,7 @@ yellowGhostviewer = do
           yellowWest2  <- loadBMP "data/GhostYellow/YellowGhostWest2.bmp"
           yellowEast1  <- loadBMP "data/GhostYellow/YellowGhostEast1.bmp"
           yellowEast2  <- loadBMP "data/GhostYellow/YellowGhostEast2.bmp"
-          scatterghosts <- scattermode
+          scatterghosts <- chaseMode
 
 
           return(((Animation North 1 yellowNorth1):(Animation North 2 yellowNorth2):(Animation South 1 yellowSouth1):
@@ -137,7 +137,7 @@ redGhostviewer = do
           redWest2  <- loadBMP "data/GhostRed/RedGhostWest2.bmp"
           redEast1  <- loadBMP "data/GhostRed/RedGhostEast1.bmp"
           redEast2  <- loadBMP "data/GhostRed/RedGhostEast2.bmp"
-          scatterghosts <- scattermode
+          scatterghosts <- chaseMode
 
 
           return(((Animation North 1 redNorth1):(Animation North 2 redNorth2):(Animation South 1 redSouth1):

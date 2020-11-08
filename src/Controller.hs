@@ -11,32 +11,31 @@ import System.Random (randomRIO)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gs@(GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d nd v sc li dt) g gt jt wt) = case s of
+loop _ (GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d nd v sc li dt) g gt jt wt) = case s of
                                              Starting  -> do
                                                              let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
-                                                             let test = (\(Maze _ _ _ tiles) -> tiles)
                                                              return $ GameState m status (Player pi pa pst px py t d nd v sc li dt) g (gt + 1) jt wt
                                              Playing   -> do
-                                                             let winGame = checkWinGame ts
-                                                             let targetedGhosts = targetLocation' d t g jt
-                                                             let player = handlePlayerMovement m p
-                                                             let updatedMazePlayer = handleScorePlayer m player
-                                                             let updatedMaze = fst updatedMazePlayer
-                                                             let updatedPlayer = snd updatedMazePlayer
-                                                             let frightenghosts = frigthenmodecheck m updatedPlayer targetedGhosts
-                                                             let ghostsmode = modechanger' frightenghosts gt
-                                                             let dirghosts = directionGhosts ghostsmode updatedMaze sc jt
-                                                             let ghosts = map  (\x -> (handleGhostMovement (mazeChecker x m jt sc) x)) dirghosts
-                                                             let checkDeadPlayerGhosts = checkPlayerDead updatedPlayer ghosts gt
-                                                             let checkedPlayer = fst checkDeadPlayerGhosts
-                                                             let checkedGhosts = snd checkDeadPlayerGhosts
-                                                             let status | winGame = Paused
-                                                                        | getPlayerLifes checkedPlayer < 0 = GameOver
-                                                                        | getPlayerDeadTicks checkedPlayer == gt = Paused
+                                                             let winGame = checkWinGame ts -- Checks if game is won
+                                                             let targetedGhosts = targetLocation' d t g jt -- Set target location for every ghost
+                                                             let player = handlePlayerMovement m p -- Handle player movement
+                                                             let updatedMazePlayer = handleScorePlayer m player -- Eat dots and update score
+                                                             let updatedMaze = fst updatedMazePlayer -- Retrieve updated maze
+                                                             let updatedPlayer = snd updatedMazePlayer -- Retrieve updated player
+                                                             let frightenghosts = frigthenmodecheck m updatedPlayer targetedGhosts -- Check if flashed dot is eaten
+                                                             let ghostsmode = modechanger' frightenghosts gt -- Change ghost mode
+                                                             let dirghosts = directionGhosts ghostsmode updatedMaze sc jt -- Calculate ghost directions
+                                                             let ghosts = map  (\x -> handleGhostMovement (mazeChecker x m jt sc) x) dirghosts -- Handle ghost movement
+                                                             let checkDeadPlayerGhosts = checkPlayerDead updatedPlayer ghosts gt -- Check if player hit ghost
+                                                             let checkedPlayer = fst checkDeadPlayerGhosts -- Retrieve checked player
+                                                             let checkedGhosts = snd checkDeadPlayerGhosts -- Retrieve checked ghosts
+                                                             let status | winGame = Paused -- Pause game if it was won
+                                                                        | getPlayerLifes checkedPlayer < 0 = GameOver -- Restart game if all lifes are lost
+                                                                        | getPlayerDeadTicks checkedPlayer == gt = Paused -- Check if player just died
                                                                         | otherwise = s
-                                                             let winGameTick | winGame = gt
-                                                                             | otherwise = wt
+                                                             let winGameTick | winGame = gt -- Set game tick to current game tick
+                                                                             | otherwise = wt -- Set game tick to winning game tick
                                                              let update = frightenmodeexc (GameState updatedMaze status checkedPlayer checkedGhosts gt jt winGameTick)
                                                              return $ update
                                              Paused    -> do
@@ -48,7 +47,9 @@ loop seconds gs@(GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d
                                                                                | otherwise = g
                                                              let finalGs | respawn = GameState m Starting playerRespawn ghostsRespawn 0 jt wt
                                                                          | otherwise = GameState m s playerRespawn ghostsRespawn (gt + 1) jt wt
-                                                             if winGame then createGameState (level + 1) else return finalGs
+                                                             let newLevel | level == 1 = 0 -- back to first level to avoid crash
+                                                                          | otherwise = level + 1
+                                                             if winGame then createGameState newLevel else return finalGs
                                              GameOver  -> do
                                                              let restartLevel = gt - dt >= restartLevelTicks
                                                              if restartLevel then
@@ -74,9 +75,9 @@ mazeChecker g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _)  maze _ _   = maze
 
 move :: Ghost -> [Direction] -> Ghost
 move g [] = g
-move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) [x]  =  (Ghost gx gy gi gis gst gt posg  dg dg (Just x) vg m tlx tly ct ft)
-move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg Frighten tlx tly ct ft) xs= (Ghost gx gy gi gis gst gt posg  dg dg (Just (xs !!(unsafePerformIO(randomnumber ((length xs)-1))))) vg Frighten tlx tly ct ft)
-move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d == North  && gty <= tly  =    (Ghost gx gy gi gis gst gt posg  dg dg (Just North) vg m tlx tly ct ft)
+move g@(Ghost gx gy gi gis gst gt posg _ dg _ vg m tlx tly ct ft) [x]  =  (Ghost gx gy gi gis gst gt posg  dg dg (Just x) vg m tlx tly ct ft)
+move g@(Ghost gx gy gi gis gst gt posg _ dg _ vg Frighten tlx tly ct ft) xs= (Ghost gx gy gi gis gst gt posg  dg dg (Just (xs !!(unsafePerformIO(randomnumber ((length xs)-1))))) vg Frighten tlx tly ct ft)
+move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty _) _ dg _ vg m tlx tly ct ft) (d:ds) | d == North  && gty <= tly  =    (Ghost gx gy gi gis gst gt posg  dg dg (Just North) vg m tlx tly ct ft)
                                                                                               | d == West && gtx >= tlx  =      (Ghost gx gy gi gis gst gt  posg  dg dg (Just West) vg m tlx tly ct ft)
                                                                                               | d == East  && gtx <= tlx =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just East) vg m tlx tly ct ft)
                                                                                               | d == South && gty >= tly =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just South) vg m tlx tly ct ft)
@@ -87,7 +88,7 @@ randomnumber k = do randomRIO (0, k)
 
 validmoves :: Maze -> Ghost-> [Direction] -> [Direction]
 validmoves _  _ [] = []
-validmoves maze  g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d==North && (not(pl == South)) && (not(dg == South))  &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty North)    = North: validmoves maze g ds
+validmoves maze  g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg _ _ _ _ _ _ _) (d:ds) | d==North && (not(pl == South)) && (not(dg == South))  &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty North)    = North: validmoves maze g ds
                                                                                                           | d==South&& (not(pl == North)) && (not(dg == North)) &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty South)     = South: validmoves maze g ds
                                                                                                           | d==West && (not(pl == East) ) && (not(dg == East))  &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty West)     = West : validmoves maze g ds
                                                                                                           | d==East && (not(pl == West))  && (not(dg == West))   &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty East)    = East : validmoves maze g ds
@@ -95,7 +96,7 @@ validmoves maze  g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd v
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate@(GameState m s (Player _ _ _ px py pt d nd v sc li dt) g gt jt wt) = return (inputKey e gstate)
+input e gstate = return (inputKey e gstate)
 
 handlePlayerMovement :: Maze -> Player -> Player
 handlePlayerMovement m (Player pic pi pst px py (Tile _ _ tt) d nd v sc li dt) = Player pic pi pst newPx newPy (Tile tileX tileY tt) dir nextDir v sc li dt
@@ -177,7 +178,7 @@ targetClyde _ x y g@(Ghost gx gy gi gis gst gt t@(Tile tx ty tt) pl dg nd vg m t
 
 --The target location of Inky is 2 tiles in the direction pac-man is going.
 targetInky :: Direction -> Int -> Int -> Ghost -> Tile ->(Tile,Tile)-> Ghost
-targetInky d x y g@(Ghost gx gy gi gis gst@(Tile inkytx inkyty inkytt) gt pg pl dg nd vg m ttx tty ct ft) tile@(Tile tx ty tt)  jt| isInJail jt g = Ghost gx gy gi gis gst gt pg pl dg nd vg m inkytx (inkyty+4) ct ft
+targetInky d x y g@(Ghost gx gy gi gis gst@(Tile inkytx inkyty _) gt pg pl dg nd vg m _ _ ct ft) (Tile tx ty _)  jt| isInJail jt g = Ghost gx gy gi gis gst gt pg pl dg nd vg m inkytx (inkyty+4) ct ft
                                                                                                                                   | m == Chase = case d of
                                                                                                                                     North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
                                                                                                                                     South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
@@ -187,7 +188,7 @@ targetInky d x y g@(Ghost gx gy gi gis gst@(Tile inkytx inkyty inkytt) gt pg pl 
                                                                                                                                   | otherwise = g
 
 targetInky' :: Int ->Int->Int
-targetInky'  tx x= tx+(tx-x)*2
+targetInky'  tx x = tx+(tx-x)*2
 
 tileInFront :: Maze -> Direction -> Int -> Int -> Tile
 tileInFront (Maze _ _ _ xs) d cx cy = head $ filter (\(Tile tx ty _) -> tx == (cx + fst v) && ty == (cy + snd v)) xs
@@ -232,6 +233,7 @@ isNearGhost sx sy (x:xs) = not vulnerable && (sxDiff < nearDistance && sxDiff > 
 isInJail :: (Tile, Tile) -> Ghost -> Bool
 isInJail (Tile topLeftX topLeftY _, Tile bottomRightX bottomRightY _) (Ghost _ _ _ _ _ _ (Tile tx ty _) _ _ _ _ _ _ _ _ _) = tx >= topLeftX && tx <= bottomRightX && ty >= topLeftY && ty <= bottomRightY
 
+removeJailDoorsFromMaze :: Maze -> Maze
 removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ convertedJailDoorTiles ++ filter (\(Tile _ _ tt) -> tt /= JailDoor) xs
                                           where
                                                 jailDoorTiles = filter (\(Tile _ _ tt) -> tt == JailDoor) xs
@@ -257,10 +259,10 @@ checkPlayerDead p@(Player pi pis pst px py pp d nd v sc li dt) ghosts gt | null 
                                                                                newGhosts = filter (\(Ghost _ _ _ _ _ gt _ _ _ _ _ _ _ _ _ _) -> gt `notElem` map ghosttype vulnerableGhosts) ghosts ++ map respawnGhost vulnerableGhosts
 
 getPlayerDeadTicks :: Player -> Int
-getPlayerDeadTicks (Player pi pis pst px py pp d nd v sc li dt) = dt
+getPlayerDeadTicks (Player _ _ _ _ _ _ _ _ _ _ _ dt) = dt
 
 getPlayerLifes :: Player -> Int
-getPlayerLifes (Player pi pis pst px py pp d nd v sc li dt) = li
+getPlayerLifes (Player _ _ _ _ _ _ _ _ _ _ li _) = li
 
 respawnPlayer :: Player -> Player
 respawnPlayer (Player pi pis pst@(Tile psx psy _) _ _ pt d _ v sc li _) = Player pi pis pst newPx newPy pt d Nothing v sc li 0
@@ -269,16 +271,16 @@ respawnPlayer (Player pi pis pst@(Tile psx psy _) _ _ pt d _ v sc li _) = Player
                                                                    newPy = tileToScreenY psy
 
 respawnGhost :: Ghost -> Ghost
-respawnGhost (Ghost gx gy gi gis gst@(Tile gsx gsy _) gt _ pl dg _ vg m ttx tty ct ft) = Ghost newGx newGy gi gis gst gt gst pl dg Nothing vg m ttx tty 0 0
+respawnGhost (Ghost _ _ gi gis gst@(Tile gsx gsy _) gt _ pl dg _ vg m ttx tty _ _) = Ghost newGx newGy gi gis gst gt gst pl dg Nothing vg m ttx tty 0 0
                                                              where
                                                                    newGx = tileToScreenX gsx
                                                                    newGy = tileToScreenY gsy
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just North) v sc li dt) g gt jt wt
-inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just South) v sc li dt) g gt jt wt
-inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just East) v sc li dt) g gt jt wt
-inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just West) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis pst px py pp d _ v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just North) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis pst px py pp d _ v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just South) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis pst px py pp d _ v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just East) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis pst px py pp d _ v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just West) v sc li dt) g gt jt wt
 inputKey _ gstate = gstate
 
 tileDirectionVector :: Direction -> (Int, Int)
@@ -310,20 +312,20 @@ modechanger  g tc    | tc < 420                 = changemode g Scatter
                      |otherwise                 = changemode g Chase
 
 changemodes :: [Ghost] -> Mode -> [Ghost]
-changemodes gs  mode  = map (\x -> changemode x mode ) gs
+changemodes gs mode  = map (`changemode` mode) gs
 
 changemode :: Ghost -> Mode -> Ghost
-changemode (Ghost gx gy gi gis gst gt posg pl dg ngd vg Frightenwhite tlx tly ct ft) mode = (Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct 0)
-changemode (Ghost gx gy gi gis gst gt posg pl dg ngd vg _ tlx tly ct ft) mode = (Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct ft)
+changemode (Ghost gx gy gi gis gst gt posg pl dg ngd vg Frightenwhite tlx tly ct _) mode = Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct 0
+changemode (Ghost gx gy gi gis gst gt posg pl dg ngd vg _ tlx tly ct ft) mode = Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct ft
 
 incrementghosttick :: [Ghost] -> [Ghost]
 incrementghosttick [] = []
 incrementghosttick  ((Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct ft): gs) =  Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct (ft+1) : incrementghosttick gs
 
 frightenmodeexc :: GameState -> GameState
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frighten tlx tly ct ft):gs) gt jt wt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt jt wt)
+frightenmodeexc (GameState m s p (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ Frighten _ _ _ ft):gs) gt jt wt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt jt wt)
                                                                                                                    | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt wt)
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frightenwhite tlx tly ct ft):gs) gt jt wt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1) jt wt)
+frightenmodeexc (GameState m s p (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ Frightenwhite _ _ _ ft):gs) gt jt wt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1) jt wt)
                                                                                                                    | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt wt)
 frightenmodeexc  (GameState m s p g gt jt wt) = (GameState m s p g (gt+1) jt wt)
 
@@ -334,12 +336,12 @@ frigthenmodecheck m p g | onflashingdot m p =  changemodes g Frighten
 
 
 onflashingdot :: Maze -> Player -> Bool
-onflashingdot m p@(Player i pi pst px py (Tile tx ty tt) d nd v s l dt) =  isNearTile px py tif &&  tift == FlashingDot  where
+onflashingdot m (Player _ _ _ px py (Tile tx ty _) d _ _ _ _ _) =  isNearTile px py tif &&  tift == FlashingDot  where
                                                                         tif = tileInFront m d tx ty
                                                                         tift = getTileType tif
 
 takeghostloc :: GhostType -> [Ghost] -> Tile
-takeghostloc ghost (g@(Ghost _ _ _ _ _ name t _ _ _ _ _ _ _ _ _):gs) | name == ghost = t
+takeghostloc ghost ((Ghost _ _ _ _ _ name t _ _ _ _ _ _ _ _ _):gs) | name == ghost = t
                                                                    | otherwise      =  takeghostloc ghost gs
 
 createGameState :: Int -> IO GameState
