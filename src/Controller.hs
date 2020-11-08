@@ -16,20 +16,18 @@ loop seconds gs@(GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d
                                                              let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
                                                              let test = (\(Maze _ _ _ tiles) -> tiles)
-                                                             print $ show $ length $ test $ m
-                                                             print $ show $ length $ test $ removeJailDoorsFromMaze m
                                                              return $ GameState m status (Player pi pa pst px py t d nd v sc li dt) g (gt + 1) jt wt
                                              Playing   -> do
                                                              let winGame = checkWinGame ts
-                                                             let targetedGhosts = targetLocation' d t g
+                                                             let targetedGhosts = targetLocation' d t g jt
                                                              let player = handlePlayerMovement m p
                                                              let updatedMazePlayer = handleScorePlayer m player
                                                              let updatedMaze = fst updatedMazePlayer
                                                              let updatedPlayer = snd updatedMazePlayer
                                                              let frightenghosts = frigthenmodecheck m updatedPlayer targetedGhosts
                                                              let ghostsmode = modechanger' frightenghosts gt
-                                                             let dirghosts = directionGhosts ghostsmode updatedMaze
-                                                             let ghosts = map (handleGhostMovement m) dirghosts
+                                                             let dirghosts = directionGhosts ghostsmode updatedMaze sc jt
+                                                             let ghosts = map  (\x -> (handleGhostMovement (mazeChecker x m jt sc) x)) dirghosts
                                                              let checkDeadPlayerGhosts = checkPlayerDead updatedPlayer ghosts gt
                                                              let checkedPlayer = fst checkDeadPlayerGhosts
                                                              let checkedGhosts = snd checkDeadPlayerGhosts
@@ -61,20 +59,28 @@ loop seconds gs@(GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d
 allPosDirec :: [Direction]
 allPosDirec= [North,South,West,East]
 
+directionGhosts :: [Ghost] -> Maze ->Int-> (Tile,Tile)-> [Ghost]
+directionGhosts [] _ _ _ = []
+directionGhosts (g:gs) m score jt =  (move g  (validmoves (mazeChecker g m jt score) g allPosDirec)): directionGhosts gs m score jt
 
-directionGhosts :: [Ghost] -> Maze -> [Ghost]
-directionGhosts [] _ = []
-directionGhosts (g:gs) m =  (move g  (validmoves m g allPosDirec)): directionGhosts gs m
+mazeChecker :: Ghost ->Maze-> (Tile,Tile) ->Int -> Maze
+mazeChecker g@(Ghost _ _ _ _ _ Pinky _ _ _ _ _ _ _ _ _ _)  maze jt _    | isInJail jt  g               = removeJailDoorsFromMaze maze
+                                                                        | otherwise                    = maze
+mazeChecker g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _)   maze jt score| isInJail jt g && score > 300 =  removeJailDoorsFromMaze maze
+                                                                        | otherwise                    = maze
+mazeChecker g@(Ghost _ _ _ _ _ Clyde _ _ _ _ _ _ _ _ _ _)  maze jt score| isInJail jt g && score > 700 =  removeJailDoorsFromMaze maze
+                                                                        | otherwise                    = maze
+mazeChecker g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _)  maze _ _   = maze
 
 move :: Ghost -> [Direction] -> Ghost
 move g [] = g
 move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) [x]  =  (Ghost gx gy gi gis gst gt posg  dg dg (Just x) vg m tlx tly ct ft)
 move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg Frighten tlx tly ct ft) xs= (Ghost gx gy gi gis gst gt posg  dg dg (Just (xs !!(unsafePerformIO(randomnumber ((length xs)-1))))) vg Frighten tlx tly ct ft)
-move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d == South  && gty <= tly  =    (Ghost gx gy gi gis gst gt posg  dg dg (Just South) vg m tlx tly ct ft)
-                                                                                       | d == West && gtx >= tlx  =      (Ghost gx gy gi gis gst gt  posg  dg dg (Just West) vg m tlx tly ct ft)
-                                                                                       | d == East  && gtx <= tlx =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just East) vg m tlx tly ct ft)
-                                                                                       | d == North && gty >= tly =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just North) vg m tlx tly ct ft)
-                                                                                       | otherwise = move g ds
+move g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d == North  && gty <= tly  =    (Ghost gx gy gi gis gst gt posg  dg dg (Just North) vg m tlx tly ct ft)
+                                                                                              | d == West && gtx >= tlx  =      (Ghost gx gy gi gis gst gt  posg  dg dg (Just West) vg m tlx tly ct ft)
+                                                                                              | d == East  && gtx <= tlx =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just East) vg m tlx tly ct ft)
+                                                                                              | d == South && gty >= tly =    (Ghost gx gy gi gis gst gt  posg  dg dg (Just South) vg m tlx tly ct ft)
+                                                                                              | otherwise = move g ds
 
 randomnumber :: Int -> IO Int
 randomnumber k = do randomRIO (0, k)
@@ -82,13 +88,10 @@ randomnumber k = do randomRIO (0, k)
 validmoves :: Maze -> Ghost-> [Direction] -> [Direction]
 validmoves _  _ [] = []
 validmoves maze  g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd vg m tlx tly ct ft) (d:ds) | d==North && (not(pl == South)) && (not(dg == South))  &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty North)    = North: validmoves maze g ds
-                                                                                                      | d==South&& (not(pl == North)) && (not(dg == North)) &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty South)     = South: validmoves maze g ds
-                                                                                                      | d==West && (not(pl == East) ) && (not(dg == East))  &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty West)     = West : validmoves maze g ds
-                                                                                                      | d==East && (not(pl == West))  && (not(dg == West))   &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty East)    = East : validmoves maze g ds
-                                                                                                      |otherwise =  validmoves maze g ds
-
-
-
+                                                                                                          | d==South&& (not(pl == North)) && (not(dg == North)) &&  isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty South)     = South: validmoves maze g ds
+                                                                                                          | d==West && (not(pl == East) ) && (not(dg == East))  &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty West)     = West : validmoves maze g ds
+                                                                                                          | d==East && (not(pl == West))  && (not(dg == West))   &&   isOnTile gx gy gtx gty && not  (tileInFrontIsBlocked maze gtx gty East)    = East : validmoves maze g ds
+                                                                                                          |otherwise =  validmoves maze g ds
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
@@ -141,49 +144,50 @@ handleScorePlayer m@(Maze w h level tiles) p@(Player i pi pst px py (Tile tx ty 
                                                                         playerScore | nearObjective = s + tileScore tif
                                                                                     | otherwise = s
 
-targetLocation' :: Direction-> Tile -> [Ghost] -> [Ghost]
-targetLocation' _ _ []= []
-targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _):gs)   = targetInky d x y g (takeghostloc Blinky (g:gs)): targetLocation' d t gs
-targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _):gs) = targetBlinky d x y g : targetLocation' d t gs
-targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Clyde _ _ _ _ _ _ _ _ _ _):gs)  = targetClyde d x y g : targetLocation' d t gs
-targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _):gs)      = targetPinky d x y g : targetLocation' d t gs
-
+targetLocation' :: Direction-> Tile -> [Ghost]->(Tile,Tile) -> [Ghost]
+targetLocation' _ _ [] _= []
+targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _):gs)   jt  = targetInky d x y g  (takeghostloc Blinky (g:gs)) jt: targetLocation' d t gs jt
+targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _):gs) jt  = targetBlinky d x y g : targetLocation' d t gs jt
+targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Clyde _ _ _ _ _ _ _ _ _ _):gs)  jt  = targetClyde d x y g jt: targetLocation' d t gs jt
+targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _):gs)      jt  = targetPinky d x y g jt: targetLocation' d t gs jt
+ 
 --The target location of Blinky is the location of Pac-man.
 targetBlinky :: Direction->Int -> Int -> Ghost -> Ghost
 targetBlinky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) | m == Chase = Ghost gx gy gi gis gst gt pg pl dg nd vg m x y ct ft
-                                                                         | m == Scatter = Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 1 ct ft
-                                                                         | otherwise = g
+                                                                                | m == Scatter = Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 1 ct ft
+                                                                                | otherwise = g
 --The target location of Pinky is 4 tiles in front of pac-man in the direction it is going
-targetPinky :: Direction -> Int -> Int -> Ghost -> Ghost
-targetPinky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) | m == Chase = case d of
-                                                                              North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y+4) ct ft
-                                                                              South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y-4) ct ft
-                                                                              West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (x-4) y ct ft
-                                                                              _     -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (x+4) y ct ft
-                                                                        | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 4 1 ct ft)
-                                                                        | otherwise = g
+targetPinky :: Direction -> Int -> Int -> Ghost ->(Tile,Tile)-> Ghost
+targetPinky d x y g@(Ghost gx gy gi gis gst@(Tile tx ty tt) gt pg pl dg nd vg m ttx tty ct ft)jt | isInJail jt g = (Ghost gx gy gi gis gst gt pg pl dg nd vg m tx (ty+4) ct ft)
+                                                                                                 | m == Chase = case d of
+                                                                                                            North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y+4) ct ft
+                                                                                                            South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y-4) ct ft
+                                                                                                            West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (x-4) y ct ft
+                                                                                                            _     -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (x+4) y ct ft
+                                                                                                 | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 4 1 ct ft)
+                                                                                                 | otherwise = g
 --When clyde is in a proximity of 8 tiles of Pac-man the target location is pac-man itself. Otherwise,the target location is the scatter location.
-targetClyde :: Direction -> Int -> Int -> Ghost -> Ghost
-targetClyde _ x y (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) | m == Chase  = proxof8tiles
-                                                                                      | m == Scatter = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m 1 36 ct ft)
-                                                                                      | otherwise    = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) where
+targetClyde :: Direction -> Int -> Int -> Ghost->(Tile,Tile) -> Ghost
+targetClyde _ x y g@(Ghost gx gy gi gis gst gt t@(Tile tx ty tt) pl dg nd vg m ttx tty ct ft) jt  | isInJail jt g = Ghost gx gy gi gis gst gt t pl dg nd vg m tx (ty+4) ct ft
+                                                                                                  | m == Chase  = proxof8tiles
+                                                                                                  | m == Scatter = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m 1 36 ct ft)
+                                                                                                  | otherwise    = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) where
                     proxof8tiles   | ((((x+y) >= (tx+ty)) && (((x+y) - (tx+ty)) <= 8)) ||  (((tx+ty) >= (x+y)) && (((tx+ty) - (x+y)) <= 8))) = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m x y ct ft)
                                    | otherwise  =(Ghost gx gy gi gis gst gt (Tile tx ty tt)  pl dg nd vg m 1 36 ct ft)
 
 --The target location of Inky is 2 tiles in the direction pac-man is going.
-targetInky :: Direction -> Int -> Int -> Ghost -> Tile -> Ghost
-targetInky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) tile@(Tile tx ty tt)        | m == Chase = case d of
-                                                                                                            North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
-                                                                                                            South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
-                                                                                                            West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx (x-2)) (targetInky' ty y) ct ft
-                                                                                                            _     -> Ghost gx gy gi gis gst gt pg pl  dg nd vg m (targetInky' tx (x+2))(targetInky' ty y) ct ft
-                                                                                                      | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 36 ct ft)
-                                                                                                      | otherwise = g
+targetInky :: Direction -> Int -> Int -> Ghost -> Tile ->(Tile,Tile)-> Ghost
+targetInky d x y g@(Ghost gx gy gi gis gst@(Tile inkytx inkyty inkytt) gt pg pl dg nd vg m ttx tty ct ft) tile@(Tile tx ty tt)  jt| isInJail jt g = Ghost gx gy gi gis gst gt pg pl dg nd vg m inkytx (inkyty+4) ct ft
+                                                                                                                                  | m == Chase = case d of
+                                                                                                                                    North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
+                                                                                                                                    South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
+                                                                                                                                    West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx (x-2)) (targetInky' ty y) ct ft
+                                                                                                                                    _     -> Ghost gx gy gi gis gst gt pg pl  dg nd vg m (targetInky' tx (x+2))(targetInky' ty y) ct ft
+                                                                                                                                  | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 36 ct ft)
+                                                                                                                                  | otherwise = g
 
 targetInky' :: Int ->Int->Int
 targetInky'  tx x= tx+(tx-x)*2
-
---possibledirections g@(Ghost gx gy gi gt pg dg vg m ttx tty)  =  
 
 tileInFront :: Maze -> Direction -> Int -> Int -> Tile
 tileInFront (Maze _ _ _ xs) d cx cy = head $ filter (\(Tile tx ty _) -> tx == (cx + fst v) && ty == (cy + snd v)) xs
@@ -228,12 +232,11 @@ isNearGhost sx sy (x:xs) = not vulnerable && (sxDiff < nearDistance && sxDiff > 
 isInJail :: (Tile, Tile) -> Ghost -> Bool
 isInJail (Tile topLeftX topLeftY _, Tile bottomRightX bottomRightY _) (Ghost _ _ _ _ _ _ (Tile tx ty _) _ _ _ _ _ _ _ _ _) = tx >= topLeftX && tx <= bottomRightX && ty >= topLeftY && ty <= bottomRightY
 
-removeJailDoorsFromMaze :: Maze -> Maze
 removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ convertedJailDoorTiles ++ filter (\(Tile _ _ tt) -> tt /= JailDoor) xs
                                           where
                                                 jailDoorTiles = filter (\(Tile _ _ tt) -> tt == JailDoor) xs
                                                 convertedJailDoorTiles = map (\(Tile tx ty _) -> Tile tx ty NormalTile) jailDoorTiles
-
+                                                
 tileScore :: Tile -> Int
 tileScore (Tile _ _ NormalTile) = 0
 tileScore (Tile _ _ Wall) = 0
