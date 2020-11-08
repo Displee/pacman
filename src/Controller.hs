@@ -11,10 +11,9 @@ import Data.Maybe (fromJust, isJust)
 loop :: Float -> GameState -> IO GameState
 loop seconds gs@(GameState m s p@(Player pi pa px py t d nd v sc li) g gt) = case s of
                                              Starting  -> do
-                                                             let tick = gt + seconds
-                                                             let status | s == Starting && tick >= fromIntegral startTimeInSeconds = Playing
+                                                             let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
-                                                             return $ GameState m status (Player pi pa px py t d nd v sc li) g tick
+                                                             return $ GameState m status (Player pi pa px py t d nd v sc li) g (gt + 1)
                                              Playing   -> do
                                                              let targetedGhosts = targetLocation' d t g
                                                              let player = handlePlayerMovement m p

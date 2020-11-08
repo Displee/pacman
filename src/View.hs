@@ -57,18 +57,18 @@ pacmanviewer = do
                (Animation South 2 pacSouth2): (Animation West 1 pacWest1):(Animation West 2 pacWest2):
                (Animation East 1 pacEast1) :(Animation East 2 pacEast2) :(Solid solid) : [])
 
-picturechanger :: [Animation] -> Direction -> Float -> Picture
-picturechanger icons d gt = case (gt / 3) `mod'` 3 of
+picturechanger :: [Animation] -> Direction -> Int -> Picture
+picturechanger icons d gt = case (gt `div` 3) `mod'` 3 of
                                         0 -> takepic d 1 icons
                                         1 -> takepic d 2 icons
                                         _ -> takesolid icons
                                         
-ghostchanger :: Ghost -> Float -> Picture
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Scatter _ _ _)  gt = case (gt / 3) `mod'` 2 of
+ghostchanger :: Ghost -> Int -> Picture
+ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Scatter _ _ _)  gt = case (gt `div` 3) `mod'` 2 of
                                                                  0 -> takescatter gis 1 Blue
                                                                  _ -> takescatter gis 2 Blue
 
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _)  gt =case (gt / 3) `mod'` 2 of
+ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _)  gt =case (gt `div` 3) `mod'` 2 of
                                                                  0 -> takepic d 1 gis
                                                                  _ -> takepic d 2 gis
 
