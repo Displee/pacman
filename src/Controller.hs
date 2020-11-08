@@ -133,7 +133,7 @@ handleScorePlayer m@(Maze w h level tiles) p@(Player i pi pst px py (Tile tx ty 
 
 targetLocation' :: Direction-> Tile -> [Ghost] -> [Ghost]
 targetLocation' _ _ []= []
-targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _):gs)   = targetInky d x y g : targetLocation' d t gs
+targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Inky _ _ _ _ _ _ _ _ _ _):gs)   = targetInky d x y g (takeghostloc Blinky (g:gs)): targetLocation' d t gs
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Blinky _ _ _ _ _ _ _ _ _ _):gs) = targetBlinky d x y g : targetLocation' d t gs
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ Clyde _ _ _ _ _ _ _ _ _ _):gs)  = targetClyde d x y g : targetLocation' d t gs
 targetLocation' d t@(Tile x y _) (g@(Ghost _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _):gs)      = targetPinky d x y g : targetLocation' d t gs
@@ -155,20 +155,23 @@ targetPinky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) |
 --When clyde is in a proximity of 8 tiles of Pac-man the target location is pac-man itself. Otherwise,the target location is the scatter location.
 targetClyde :: Direction -> Int -> Int -> Ghost -> Ghost
 targetClyde _ x y (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) | m == Chase  = proxof8tiles
-                                                                                   | m == Scatter = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m 1 36 ct ft)
-                                                                                   | otherwise    = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) where
-                    proxof8tiles   | ((((x+y) >= (tx+ty)) && (((x+y) - (tx+ty)) <= 8)) ||  (((tx+ty) >= (x+y)) && (((tx+ty) - (x+y)) <= 8))) = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft)
+                                                                                      | m == Scatter = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m 1 36 ct ft)
+                                                                                      | otherwise    = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m ttx tty ct ft) where
+                    proxof8tiles   | ((((x+y) >= (tx+ty)) && (((x+y) - (tx+ty)) <= 8)) ||  (((tx+ty) >= (x+y)) && (((tx+ty) - (x+y)) <= 8))) = (Ghost gx gy gi gis gst gt (Tile tx ty tt) pl dg nd vg m x y ct ft)
                                    | otherwise  =(Ghost gx gy gi gis gst gt (Tile tx ty tt)  pl dg nd vg m 1 36 ct ft)
 
 --The target location of Inky is 2 tiles in the direction pac-man is going.
-targetInky :: Direction -> Int -> Int -> Ghost -> Ghost
-targetInky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft)  | m == Chase = case d of
-                                                                              North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y+2) ct ft
-                                                                              South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m x (y-2) ct ft
-                                                                              West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (x-2) y ct ft
-                                                                              _     -> Ghost gx gy gi gis gst gt pg pl  dg nd vg m (x+2) y ct ft
-                                                                        | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 36 ct ft)
-                                                                        | otherwise = g
+targetInky :: Direction -> Int -> Int -> Ghost -> Tile -> Ghost
+targetInky d x y g@(Ghost gx gy gi gis gst gt pg pl dg nd vg m ttx tty ct ft) tile@(Tile tx ty tt)        | m == Chase = case d of
+                                                                                                            North -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
+                                                                                                            South -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx x)     (targetInky' ty (y+2)) ct ft
+                                                                                                            West  -> Ghost gx gy gi gis gst gt pg pl dg nd vg m (targetInky' tx (x-2)) (targetInky' ty y) ct ft
+                                                                                                            _     -> Ghost gx gy gi gis gst gt pg pl  dg nd vg m (targetInky' tx (x+2))(targetInky' ty y) ct ft
+                                                                                                      | m == Scatter = (Ghost gx gy gi gis gst gt pg pl dg nd vg m 28 36 ct ft)
+                                                                                                      | otherwise = g
+
+targetInky' :: Int ->Int->Int
+targetInky'  tx x= tx+(tx-x)*2
 
 --possibledirections g@(Ghost gx gy gi gt pg dg vg m ttx tty)  =  
 
@@ -265,13 +268,13 @@ modechanger' (g:gs) tick = modechanger g tick : modechanger'  gs tick
 modechanger:: Ghost -> Int -> Ghost
 modechanger g@(Ghost _ _ _ _ _ _ _ _ _ _ _ Frighten _ _ _ _) _= g
 modechanger g@(Ghost _ _ _ _ _ _ _ _ _ _ _ Frightenwhite _ _ _ _) _= g
-modechanger  g tc    | tc < 520                 = changemode g Scatter
-                     |520 > tc  && tc < 1720    = changemode g Chase
-                     |2240 > tc && tc <2660     = changemode g Scatter
-                     |2660 > tc && tc <3860     = changemode g Chase
-                     |3860 > tc && tc <4160     = changemode g Scatter
-                     |4160> tc  && tc <5360     = changemode g Chase
-                     |5360> tc  && tc <5660     = changemode g Scatter
+modechanger  g tc    | tc < 420                 = changemode g Scatter
+                     |420 > tc  && tc < 1620    = changemode g Chase
+                     |1620 > tc && tc <2040     = changemode g Scatter
+                     |2040 > tc && tc <3240     = changemode g Chase
+                     |3240 > tc && tc <3540     = changemode g Scatter
+                     |3540> tc  && tc <4740     = changemode g Chase
+                     |4740> tc  && tc <5040     = changemode g Scatter
                      |otherwise                 = changemode g Chase
 
 changemodes :: [Ghost] -> Mode -> [Ghost]
@@ -302,7 +305,11 @@ onflashingdot :: Maze -> Player -> Bool
 onflashingdot m p@(Player i pi pst px py (Tile tx ty tt) d nd v s l dt) =  isNearTile px py tif &&  tift == FlashingDot  where
                                                                         tif = tileInFront m d tx ty
                                                                         tift = getTileType tif
-                                                                        
+
+takeghostloc :: GhostType -> [Ghost] -> Tile
+takeghostloc ghost (g@(Ghost _ _ _ _ _ name t _ _ _ _ _ _ _ _ _):gs) | name == ghost = t
+                                                                   | otherwise      =  takeghostloc ghost gs
+
 createGameState :: Int -> IO GameState
 createGameState level = do
                           levelContent <- readFile ("./data/level_" ++ show level ++ ".txt")
