@@ -2,14 +2,14 @@ module Controller where
 
 import Model
 
-import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
-import System.Random
 import Data.Maybe (fromJust, isJust)
+import GameStateUtils
+import GridUtils
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gs@(GameState m s p@(Player pi pa px py t d nd v sc li) g gt) = case s of
+loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa px py t d nd v sc li) g gt) = case s of
                                              Starting  -> do
                                                              let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
@@ -23,7 +23,8 @@ loop seconds gs@(GameState m s p@(Player pi pa px py t d nd v sc li) g gt) = cas
                                                              let ghostsmode = modechanger' targetedGhosts gt
                                                              let dirghosts = directionGhosts ghostsmode updatedMaze
                                                              let ghosts = map (handleGhostMovement m) dirghosts
-                                                             let status  = s --TODO check if player is dead
+                                                             let status | isNearGhost px py ghosts = Paused
+                                                                        | otherwise = s
                                                              return $ GameState updatedMaze status updatedPlayer ghosts (gt + 1)
                                              Paused    -> do
                                                              -- TODO Player died, stop processing movement and respawn player and ghosts
@@ -37,6 +38,7 @@ allPosDirec= [North,South,West,East]
 
 
 directionGhosts :: [Ghost] -> Maze -> [Ghost]
+directionGhosts [] _ = []
 directionGhosts (g:gs) m =  (move g  (validmoves m g allPosDirec)): directionGhosts gs m
 
 move :: Ghost -> [Direction] -> Ghost
@@ -135,7 +137,7 @@ targetPinky d x y g@(Ghost gx gy gi gis gt pg pl dg nd vg m ttx tty ct) | m == C
                                                                               West  -> Ghost gx gy gi gis gt pg pl dg nd vg m (x-4) y ct
                                                                               _     -> Ghost gx gy gi gis gt pg pl dg nd vg m (x+4) y ct
                                                                         | m == Scatter = (Ghost gx gy gi gis gt pg pl dg nd vg m 4 1 ct)
-                                                                        | otherwise = g 
+                                                                        | otherwise = g
 --When clyde is in a proximity of 8 tiles of Pac-man the target location is pac-man itself. Otherwise,the target location is the scatter location.
 targetClyde :: Direction -> Int -> Int -> Ghost -> Ghost
 targetClyde _ x y (Ghost gx gy gi gis gt (Tile tx ty tt) pl dg nd vg m ttx tty ct) | m == Chase  = proxof8tiles
@@ -199,82 +201,6 @@ inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis px
 inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis px py pp d nd v sc li) g gt) = GameState m s (Player pi pis px py pp d (Just West) v sc li) g gt
 inputKey _ gstate = gstate
 
--- | Grid functions
-
-rect :: Float -> Float -> Float -> Float -> Picture
-rect startX startY endX endY = Color white $ Line [(startX, startY), (endX, startY), (endX, endY), (startX, endY), (startX, startY)]
-
-cell :: Float -> Float -> Float -> Float -> Picture
-cell pl pt x y = rect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
-
-grid :: Int -> Int -> Int -> Int -> [Picture]
-grid x y width height = [cell (fromIntegral x + screenOffsetX) (fromIntegral (-y) + screenOffsetY) (fromIntegral a) (fromIntegral b) | a <- [0..width - 1], b <- [0..height - 1]]
-                        where
-                             halfScreenHeight :: Int
-                             halfScreenHeight = screenHeight `div` 2
-                             screenOffsetX :: Float
-                             screenOffsetX = fromIntegral screenWidth * (-0.5)
-                             screenOffsetY :: Float
-                             screenOffsetY = fromIntegral (halfScreenHeight - (height * round cellSize))
-
-fillRect :: Float -> Float -> Float -> Float -> Color -> Picture
-fillRect startX startY endX endY c = Color c $ Polygon [(startX, startY), (endX, startY), (endX, endY), (startX, endY), (startX, startY)]
-
-fillCell :: Float -> Float -> Float -> Float -> Color -> Picture
-fillCell pl pt x y = fillRect (pl + cellSize * x) (pt + cellSize * y) (pl + cellSize * (x + 1)) (pt + cellSize * (y + 1))
-
-fillCellSmart :: Int -> Int -> Int -> Int -> Color -> Picture
-fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegral (-pt) + screenOffsetY) (fromIntegral x) (fromIntegral y)
-                          where
-                                halfScreenHeight :: Int
-                                halfScreenHeight = screenHeight `div` 2
-                                screenOffsetX :: Float
-                                screenOffsetX = fromIntegral screenWidth * (-0.5)
-                                screenOffsetY :: Float
-                                screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
-
-gridMaker :: Int -> Int ->  [Char]-> [ Tile]
-gridMaker x y [] =[]
-gridMaker x y (n:ns) | n == '\n' = gridMaker 1 (y+1) ns
-                     | otherwise = gridMaker' x y n  : gridMaker (x+1) y ns
-
-gridMaker' :: Int -> Int -> Char -> Tile
-gridMaker' x y '.'  = Tile {x= x ,y= y, tileType= Dot}
-gridMaker' x y '#'  = Tile {x= x ,y= y, tileType= Wall}
-gridMaker' x y '*'  = Tile {x= x ,y= y, tileType= FlashingDot}
-gridMaker' x y _  = Tile {x= x ,y= y, tileType= NormalTile}
-
--- I'm not sure where the 7 and 7.5 come from, I think it has to do with the bmp dimensions of pacman which is 12x13
--- However these two values are used to show pacman in the middle of the tile
-
-tileToScreenX :: Int -> Float
-tileToScreenX x = fromIntegral gridPaddingLeft + screenOffsetX + (cellSize * fromIntegral x) + 7
-            where
-                  screenOffsetX :: Float
-                  screenOffsetX = fromIntegral screenWidth * (-0.5)
-
-tileToScreenY :: Int -> Float
-tileToScreenY y = fromIntegral (-gridPaddingTop) + screenOffsetY + (cellSize * fromIntegral y) + 7.5
-            where
-                  halfScreenHeight :: Int
-                  halfScreenHeight = screenHeight `div` 2
-                  screenOffsetY :: Float
-                  screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
-
-screenXToTile :: Float -> Int
-screenXToTile x = round $ (x - 7 - fromIntegral gridPaddingLeft - screenOffsetX) / cellSize
-                  where
-                        screenOffsetX :: Float
-                        screenOffsetX = fromIntegral screenWidth * (-0.5)
-
-screenYToTile :: Float -> Int
-screenYToTile y = -(round $ (y - 7.5 + fromIntegral gridPaddingTop - screenOffsetY) / cellSize)
-                  where
-                        halfScreenHeight :: Int
-                        halfScreenHeight = screenHeight `div` 2
-                        screenOffsetY :: Float
-                        screenOffsetY = fromIntegral halfScreenHeight - cellSize
-
 tileDirectionVector :: Direction -> (Int, Int)
 tileDirectionVector North = (0, -1)
 tileDirectionVector South = (0, 1)
@@ -291,11 +217,11 @@ modechanger' :: [Ghost] -> Int -> [Ghost]
 modechanger' [] _ = []
 modechanger' (g:gs) tick = modechanger g tick : modechanger'  gs tick
 
-modechanger:: Ghost -> Int -> Ghost 
-modechanger  g tc    | tc < 520                 = changemode g Scatter  
-                     |520 > tc && tc < 1720     = changemode g Chase    
-                     |2240 > tc && tc <  2660   = changemode g Scatter    
-                     |2660 > tc && tc <  3860   = changemode g Chase   
+modechanger:: Ghost -> Int -> Ghost
+modechanger  g tc    | tc < 520                 = changemode g Scatter
+                     |520 > tc && tc < 1720     = changemode g Chase
+                     |2240 > tc && tc <  2660   = changemode g Scatter
+                     |2660 > tc && tc <  3860   = changemode g Chase
                      |3860 > tc && tc < 4160    = changemode g Scatter
                      |4160> tc && tc < 5360     = changemode g Chase
                      |5360> tc && tc<5660       = changemode g Scatter
@@ -303,3 +229,16 @@ modechanger  g tc    | tc < 520                 = changemode g Scatter
 
 changemode :: Ghost -> Mode -> Ghost
 changemode (Ghost gx gy gi gis gt posg pl dg ngd vg _ tlx tly ct) mode = (Ghost gx gy gi gis gt posg pl dg ngd vg mode tlx tly ct)
+
+createGameState :: Int -> IO GameState
+createGameState level = do
+                          levelContent <- readFile ("./data/level_" ++ show level ++ ".txt")
+                          let maze = Maze 55 35 level (gridMaker 1 1 levelContent)
+                          let playerPosition = (\(Tile tx ty _) -> (tx, ty)) $ readPlayer 1 1 levelContent
+                          player <- uncurry (createPlayer maze) playerPosition
+                          pinky <- readGhost 1 1 'P' levelContent
+                          inky <- readGhost 1 1 'I' levelContent
+                          blinky <- readGhost 1 1 'B' levelContent
+                          clyde <- readGhost 1 1 'C' levelContent
+                          let ghosts = map fromJust [pinky, inky, blinky, clyde]
+                          return (GameState maze Starting player ghosts 0)

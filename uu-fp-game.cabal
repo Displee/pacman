@@ -30,6 +30,8 @@ library
       Controller
       Model
       View
+      GridUtils
+      GameStateUtils
   other-modules:
       Paths_uu_fp_game
   hs-source-dirs:
