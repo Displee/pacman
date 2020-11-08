@@ -36,7 +36,7 @@ fillCellSmart pl pt x y = fillCell (fromIntegral pl + screenOffsetX) (fromIntegr
                                 screenOffsetY = (fromIntegral halfScreenHeight - cellSize) - ((cellSize * 2) * fromIntegral y)
 
 drawTileGrid :: GameState -> Picture
-drawTileGrid (GameState (Maze w h l t) status p _ _ _) = Pictures $ grid gridPaddingLeft gridPaddingTop w h ++ filled t
+drawTileGrid (GameState (Maze w h l t) status p _ _ _ _) = Pictures $ grid gridPaddingLeft gridPaddingTop w h ++ filled t
                                                              where
                                                                   fillTile :: Tile -> Picture
                                                                   fillTile (Tile x y Dot) = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y black, translate (tileToScreenX x) (tileToScreenY y) (Color yellow $ Graphics.Gloss.circleSolid 3)]

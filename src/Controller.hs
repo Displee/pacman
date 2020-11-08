@@ -11,12 +11,16 @@ import System.Random (randomRIO)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa pst px py t d nd v sc li dt) g gt jt) = case s of
+loop seconds gs@(GameState m@(Maze _ _ level ts) s p@(Player pi pa pst px py t d nd v sc li dt) g gt jt wt) = case s of
                                              Starting  -> do
                                                              let status | s == Starting && gt >= startTimeGameTicks = Playing
                                                                         | otherwise = s
-                                                             return $ GameState m status (Player pi pa pst px py t d nd v sc li dt) g (gt + 1) jt
+                                                             let test = (\(Maze _ _ _ tiles) -> tiles)
+                                                             print $ show $ length $ test $ m
+                                                             print $ show $ length $ test $ removeJailDoorsFromMaze m
+                                                             return $ GameState m status (Player pi pa pst px py t d nd v sc li dt) g (gt + 1) jt wt
                                              Playing   -> do
+                                                             let winGame = checkWinGame ts
                                                              let targetedGhosts = targetLocation' d t g
                                                              let player = handlePlayerMovement m p
                                                              let updatedMazePlayer = handleScorePlayer m player
@@ -26,27 +30,33 @@ loop seconds gs@(GameState m@(Maze _ _ level _) s p@(Player pi pa pst px py t d 
                                                              let ghostsmode = modechanger' frightenghosts gt
                                                              let dirghosts = directionGhosts ghostsmode updatedMaze
                                                              let ghosts = map (handleGhostMovement m) dirghosts
-                                                             let playerDead = checkPlayerDead updatedPlayer ghosts gt
-                                                             let status | getPlayerLifes playerDead < 0 = GameOver
-                                                                        | getPlayerDeadTicks playerDead == gt = Paused
+                                                             let checkDeadPlayerGhosts = checkPlayerDead updatedPlayer ghosts gt
+                                                             let checkedPlayer = fst checkDeadPlayerGhosts
+                                                             let checkedGhosts = snd checkDeadPlayerGhosts
+                                                             let status | winGame = Paused
+                                                                        | getPlayerLifes checkedPlayer < 0 = GameOver
+                                                                        | getPlayerDeadTicks checkedPlayer == gt = Paused
                                                                         | otherwise = s
-                                                             let update = frightenmodeexc (GameState updatedMaze status playerDead ghosts gt jt)
+                                                             let winGameTick | winGame = gt
+                                                                             | otherwise = wt
+                                                             let update = frightenmodeexc (GameState updatedMaze status checkedPlayer checkedGhosts gt jt winGameTick)
                                                              return $ update
                                              Paused    -> do
-                                                             let respawn = gt - dt >= respawnTick
+                                                             let winGame = wt /= 0 && gt - wt >= nextLevelTick
+                                                             let respawn = dt /= 0 && gt - dt >= respawnTick
                                                              let playerRespawn | respawn = respawnPlayer p
                                                                                | otherwise = p
                                                              let ghostsRespawn | respawn = map respawnGhost g
                                                                                | otherwise = g
-                                                             let finalGs | respawn = GameState m Starting playerRespawn ghostsRespawn 0 jt
-                                                                         | otherwise = GameState m s playerRespawn ghostsRespawn (gt + 1) jt
-                                                             return finalGs
+                                                             let finalGs | respawn = GameState m Starting playerRespawn ghostsRespawn 0 jt wt
+                                                                         | otherwise = GameState m s playerRespawn ghostsRespawn (gt + 1) jt wt
+                                                             if winGame then createGameState (level + 1) else return finalGs
                                              GameOver  -> do
                                                              let restartLevel = gt - dt >= restartLevelTicks
                                                              if restartLevel then
                                                                                   createGameState level
                                                                             else
-                                                                                 return $ GameState m s p g (gt + 1) jt
+                                                                                 return $ GameState m s p g (gt + 1) jt wt
 
 allPosDirec :: [Direction]
 allPosDirec= [North,South,West,East]
@@ -82,7 +92,7 @@ validmoves maze  g@(Ghost gx gy gi gis gst gt posg@(Tile gtx gty tt) pl dg ngd v
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate@(GameState m s (Player _ _ _ px py pt d nd v sc li dt) g gt jt) = return (inputKey e gstate)
+input e gstate@(GameState m s (Player _ _ _ px py pt d nd v sc li dt) g gt jt wt) = return (inputKey e gstate)
 
 handlePlayerMovement :: Maze -> Player -> Player
 handlePlayerMovement m (Player pic pi pst px py (Tile _ _ tt) d nd v sc li dt) = Player pic pi pst newPx newPy (Tile tileX tileY tt) dir nextDir v sc li dt
@@ -192,6 +202,17 @@ isOnTile sx sy tx ty = sx == tileToScreenX tx && sy == tileToScreenY ty
 isNearTile :: Float -> Float -> Tile -> Bool
 isNearTile sx sy (Tile x y _) = x == screenXToTile sx && y == screenYToTile sy
 
+getNearGhosts :: Float -> Float -> [Ghost] -> [Ghost]
+getNearGhosts _ _ [] = []
+getNearGhosts sx sy (x:xs) | sxDiff < nearDistance && sxDiff > (-nearDistance) &&
+                             syDiff < nearDistance && syDiff > (-nearDistance) = x : getNearGhosts sx sy xs
+                           | otherwise = getNearGhosts sx sy xs
+                           where
+                                 pos = (\(Ghost gx gy _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> (gx, gy)) x
+                                 sxDiff = sx - fst pos
+                                 syDiff = sy - snd pos
+                                 nearDistance = 5
+
 isNearGhost :: Float -> Float -> [Ghost] -> Bool
 isNearGhost _ _ [] = False
 isNearGhost sx sy (x:xs) = not vulnerable && (sxDiff < nearDistance && sxDiff > (-nearDistance) &&
@@ -208,7 +229,10 @@ isInJail :: (Tile, Tile) -> Ghost -> Bool
 isInJail (Tile topLeftX topLeftY _, Tile bottomRightX bottomRightY _) (Ghost _ _ _ _ _ _ (Tile tx ty _) _ _ _ _ _ _ _ _ _) = tx >= topLeftX && tx <= bottomRightX && ty >= topLeftY && ty <= bottomRightY
 
 removeJailDoorsFromMaze :: Maze -> Maze
-removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ filter (\(Tile _ _ tt) -> tt /= JailDoor) xs
+removeJailDoorsFromMaze (Maze w h l xs) = Maze w h l $ convertedJailDoorTiles ++ filter (\(Tile _ _ tt) -> tt /= JailDoor) xs
+                                          where
+                                                jailDoorTiles = filter (\(Tile _ _ tt) -> tt == JailDoor) xs
+                                                convertedJailDoorTiles = map (\(Tile tx ty _) -> Tile tx ty NormalTile) jailDoorTiles
 
 tileScore :: Tile -> Int
 tileScore (Tile _ _ NormalTile) = 0
@@ -220,9 +244,14 @@ tileScore (Tile _ _ FlashingDot) = 50
 modifyTileType :: Tile -> TileType -> Tile
 modifyTileType (Tile tx ty _) = Tile tx ty
 
-checkPlayerDead :: Player -> [Ghost] -> Int -> Player
-checkPlayerDead p@(Player pi pis pst px py pp d nd v sc li dt) ghosts gt | isNearGhost px py ghosts = Player pi pis pst px py pp d nd v sc (li - 1) gt
-                                                                     | otherwise = p
+checkPlayerDead :: Player -> [Ghost] -> Int -> (Player, [Ghost])
+checkPlayerDead p@(Player pi pis pst px py pp d nd v sc li dt) ghosts gt | null nearGhosts = (p, ghosts)
+                                                                         | length nearGhosts /= length vulnerableGhosts = (Player pi pis pst px py pp d nd v sc (li - 1) gt, ghosts)
+                                                                         | otherwise = (Player pi pis pst px py pp d nd v (sc + 200) li dt, newGhosts)
+                                                                         where
+                                                                               nearGhosts = getNearGhosts px py ghosts
+                                                                               vulnerableGhosts = filter (\(Ghost _ _ _ _ _ _ _ _ _ _ _ m _ _ _ _) -> m == Frighten || m == Frightenwhite) nearGhosts
+                                                                               newGhosts = filter (\(Ghost _ _ _ _ _ gt _ _ _ _ _ _ _ _ _ _) -> gt `notElem` map ghosttype vulnerableGhosts) ghosts ++ map respawnGhost vulnerableGhosts
 
 getPlayerDeadTicks :: Player -> Int
 getPlayerDeadTicks (Player pi pis pst px py pp d nd v sc li dt) = dt
@@ -243,10 +272,10 @@ respawnGhost (Ghost gx gy gi gis gst@(Tile gsx gsy _) gt _ pl dg _ vg m ttx tty 
                                                                    newGy = tileToScreenY gsy
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt) = GameState m s (Player pi pis pst px py pp d (Just North) v sc li dt) g gt jt
-inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt) = GameState m s (Player pi pis pst px py pp d (Just South) v sc li dt) g gt jt
-inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt) = GameState m s (Player pi pis pst px py pp d (Just East) v sc li dt) g gt jt
-inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt) = GameState m s (Player pi pis pst px py pp d (Just West) v sc li dt) g gt jt
+inputKey (EventKey (SpecialKey KeyUp) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just North) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyDown) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just South) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyRight) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just East) v sc li dt) g gt jt wt
+inputKey (EventKey (SpecialKey KeyLeft) _ _ _) (GameState m s (Player pi pis pst px py pp d nd v sc li dt) g gt jt wt) = GameState m s (Player pi pis pst px py pp d (Just West) v sc li dt) g gt jt wt
 inputKey _ gstate = gstate
 
 tileDirectionVector :: Direction -> (Int, Int)
@@ -289,11 +318,11 @@ incrementghosttick [] = []
 incrementghosttick  ((Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct ft): gs) =  Ghost gx gy gi gis gst gt posg pl dg ngd vg mode tlx tly ct (ft+1) : incrementghosttick gs
 
 frightenmodeexc :: GameState -> GameState
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frighten tlx tly ct ft):gs) gt jt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt jt)
-                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt)
-frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frightenwhite tlx tly ct ft):gs) gt jt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1) jt)
-                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt)
-frightenmodeexc  (GameState m s p g gt jt) = (GameState m s p g (gt+1) jt)
+frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frighten tlx tly ct ft):gs) gt jt wt)      | 300< ft   = (GameState m s p (incrementghosttick (changemodes (g:gs) Frightenwhite) ) gt jt wt)
+                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt wt)
+frightenmodeexc (GameState m s p (g@(Ghost gx gy gi gis gst typ posg pl dg ngd vg Frightenwhite tlx tly ct ft):gs) gt jt wt) | ft> 600 = (GameState m s p (changemodes (g:gs) Chase) (gt+1) jt wt)
+                                                                                                                   | otherwise = (GameState m s p (incrementghosttick (g:gs)) gt jt wt)
+frightenmodeexc  (GameState m s p g gt jt wt) = (GameState m s p g (gt+1) jt wt)
 
 
 frigthenmodecheck :: Maze -> Player -> [Ghost] -> [Ghost]
@@ -322,4 +351,9 @@ createGameState level = do
                           clyde <- readGhost 1 1 'C' levelContent
                           let ghosts = map fromJust [pinky, inky, blinky, clyde]
                           let jailTiles = findJailPositions 1 1 (Tile 0 0 NormalTile, Tile 0 0 NormalTile) levelContent
-                          return (GameState maze Starting player ghosts 0 jailTiles)
+                          return (GameState maze Starting player ghosts 0 jailTiles 0)
+
+checkWinGame :: [Tile] -> Bool
+checkWinGame [] = True
+checkWinGame ((Tile _ _ tt):xs) | tt /= Dot && tt /= FlashingDot = checkWinGame xs
+                                | otherwise = False

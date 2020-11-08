@@ -8,6 +8,9 @@ startTimeGameTicks = 60 * 4
 respawnTick :: Int
 respawnTick = 60 * 4
 
+nextLevelTick :: Int
+nextLevelTick = 60 * 4
+
 restartLevelTicks :: Int
 restartLevelTicks = 60 * 4
 
@@ -23,7 +26,8 @@ data GameState = GameState {
       player :: Player,
       ghosts :: [Ghost],
       gameTick :: Int,
-      jailTiles :: (Tile, Tile)
+      jailTiles :: (Tile, Tile),
+      winTick :: Int
   }
 
 data TileType = Dot | FlashingDot | NormalTile | Wall | JailDoor deriving(Eq, Show)

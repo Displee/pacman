@@ -13,7 +13,7 @@ getGhostIcon' :: Ghost -> Picture -> Picture
 getGhostIcon' (Ghost gx gy gi _ _ _ _ _ _ _ _ _ _ _ _ _) = translate gx gy
 
 view :: GameState -> IO Picture
-view gs@(GameState _ status (Player pi pis _ px py (Tile x y _) d _ _ _ _ _) g gt _) = do
+view gs@(GameState _ status (Player pi pis _ px py (Tile x y _) d _ _ _ _ _) g gt _ _) = do
                                 let gridPicture = drawTileGrid gs
                                 let pacman = translate px py (picturechanger pis d status gt)
                                 let pinkghostpic = ghostchanger (takeghost Pinky g) status gt
