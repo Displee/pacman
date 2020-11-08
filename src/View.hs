@@ -64,8 +64,8 @@ picturechanger icons d status gt | status == Playing = case (gt `div` 3) `mod'` 
                                  | otherwise = takesolid icons
                                         
 ghostchanger :: Ghost -> GameStatus -> Int -> Picture
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Scatter _ _ _) status gt | (gt `div` 3) `mod'` 2 == 0 && status == Playing = takescatter gis 1 Blue
-                                                                       | otherwise = takescatter gis 2 Blue
+ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Frighten _ _ _) status gt | (gt `div` 3) `mod'` 2 == 0 && status == Playing = takescatter gis 1 Blue
+                                                                        | otherwise = takescatter gis 2 Blue
 
 ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _) status gt | (gt `div` 3) `mod'` 2 == 0 && status == Playing = takepic d 1 gis
                                                                  | otherwise = takepic d 2 gis
