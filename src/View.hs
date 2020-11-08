@@ -10,7 +10,7 @@ getGhostIcon (Ghost gx gy gi _ _ _ _ _  _ _ _ _ _) = translate gx gy gi
 
 view :: GameState -> IO Picture
 view gs@(GameState _ _ (Player pi px py (Tile x y _) _ _ _ _ _ ) g _) = do
-                                let gridPicture = viewPure gs
+                                let gridPicture = drawTileGrid gs
                                 let pacman = translate px py pi
                                 let ghost1 = getGhostIcon $ head g
                                 let ghost2 = getGhostIcon $ g!!1
@@ -31,9 +31,3 @@ drawTileGrid (GameState (Maze w h l t) status p _ _) = Pictures $ (grid gridPadd
                                                                                         | t == FlashingDot = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y (black), translate (tileToScreenX x) (tileToScreenY y) (Color white $ Graphics.Gloss.circleSolid 6)]
                                                                                         | otherwise = fillCellSmart gridPaddingLeft gridPaddingTop x y (tileColor t)
                                                                   filled xs = map fillTile xs
-
-viewPure :: GameState -> Picture
-viewPure gs = case status gs of
-  NotPlaying  -> drawTileGrid gs
-  Playing     -> color green (text "Playing!")
-  GameOver    -> color green (text "Game over!")

@@ -2,15 +2,17 @@ module Model where
 
 import Graphics.Gloss.Data.Picture (Picture)
 
+startTimeInSeconds :: Int
+startTimeInSeconds = 4
 
-data GameStatus = NotPlaying | Playing | GameOver deriving (Eq, Show)
+data GameStatus = Starting | Playing | Paused | GameOver deriving (Eq, Show)
 
 data GameState = GameState {
       maze :: Maze,
       status :: GameStatus,
       player :: Player,
       ghosts :: [Ghost],
-      gameTick :: Int
+      gameTick :: Float
   }
 
 data TileType = Dot | FlashingDot | NormalTile | Wall

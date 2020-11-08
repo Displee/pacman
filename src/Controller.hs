@@ -9,15 +9,27 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds (GameState m s p@(Player pi px py t d nd v sc li) g gt) = do                                             
-                                             let targetedGhosts = targetLocation' d t g
-                                             let player = handlePlayerMovement m p
-                                             let updatedMazePlayer = handleScorePlayer m player
-                                             let updatedMaze = fst updatedMazePlayer
-                                             let updatedPlayer = snd updatedMazePlayer
-                                             let dirghosts = directionGhosts targetedGhosts updatedMaze
-                                             let ghosts = map (handleGhostMovement m) dirghosts
-                                             return $ GameState updatedMaze s updatedPlayer ghosts (gt + 1)
+loop seconds gs@(GameState m s p@(Player pi px py t d nd v sc li) g gt) = case s of
+                                             Starting  -> do
+                                                             let tick = gt + seconds
+                                                             let status | s == Starting && tick >= fromIntegral startTimeInSeconds = Playing
+                                                                        | otherwise = s
+                                                             return $ GameState m status (Player pi px py t d nd v sc li) g tick
+                                             Playing   -> do
+                                                             let targetedGhosts = targetLocation' d t g
+                                                             let player = handlePlayerMovement m p
+                                                             let updatedMazePlayer = handleScorePlayer m player
+                                                             let updatedMaze = fst updatedMazePlayer
+                                                             let updatedPlayer = snd updatedMazePlayer
+                                                             let dirghosts = directionGhosts targetedGhosts updatedMaze
+                                                             let ghosts = map (handleGhostMovement m) dirghosts
+                                                             let status = s
+                                                             return $ GameState updatedMaze status updatedPlayer ghosts (gt + 1)
+                                             Paused    -> do
+                                                             
+                                                             return (gs)
+                                             GameOver  -> do
+                                                             return (gs)
 
 allPosDirec :: [Direction]
 allPosDirec= [North,East,West,South]
