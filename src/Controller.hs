@@ -25,9 +25,10 @@ loop seconds gs@(GameState m s p@(Player pi pa px py t d nd v sc li) g gt) = cas
                                                              let status  = s --TODO check if player is dead
                                                              return $ GameState updatedMaze status updatedPlayer ghosts (gt + 1)
                                              Paused    -> do
-
+                                                             -- TODO Player died, stop processing movement and respawn player and ghosts
                                                              return (gs)
                                              GameOver  -> do
+                                                             -- TODO Game over, re-read maze and respawn player and ghosts
                                                              return (gs)
 
 allPosDirec :: [Direction]
