@@ -9,12 +9,12 @@ import Data.Maybe (fromJust, isJust)
 
 -- | Handle the game loop
 loop :: Float -> GameState -> IO GameState
-loop seconds gs@(GameState m s p@(Player pi px py t d nd v sc li) g gt) = case s of
+loop seconds gs@(GameState m s p@(Player pi pa px py t d nd v sc li) g gt) = case s of
                                              Starting  -> do
                                                              let tick = gt + seconds
                                                              let status | s == Starting && tick >= fromIntegral startTimeInSeconds = Playing
                                                                         | otherwise = s
-                                                             return $ GameState m status (Player pi px py t d nd v sc li) g tick
+                                                             return $ GameState m status (Player pi pa px py t d nd v sc li) g tick
                                              Playing   -> do
                                                              let targetedGhosts = targetLocation' d t g
                                                              let player = handlePlayerMovement m p
@@ -23,7 +23,7 @@ loop seconds gs@(GameState m s p@(Player pi px py t d nd v sc li) g gt) = case s
                                                              let updatedPlayer = snd updatedMazePlayer
                                                              let dirghosts = directionGhosts targetedGhosts updatedMaze
                                                              let ghosts = map (handleGhostMovement m) dirghosts
-                                                             let status = s
+                                                             let status  = s --TODO check if player is dead
                                                              return $ GameState updatedMaze status updatedPlayer ghosts (gt + 1)
                                              Paused    -> do
 
@@ -169,9 +169,12 @@ isNearTile sx sy (Tile x y _) = x == screenXToTile sx && y == screenYToTile sy
 
 isNearGhost :: Float -> Float -> [Ghost] -> Bool
 isNearGhost _ _ [] = False
-isNearGhost sx sy (x:xs) = (sx - fst pos < nearDistance && sy - snd pos < nearDistance) || isNearGhost sx sy xs
+isNearGhost sx sy (x:xs) = (sxDiff < nearDistance && sxDiff > (-nearDistance) &&
+                            syDiff < nearDistance && syDiff > (-nearDistance)) || isNearGhost sx sy xs
                            where
                                  pos = (\(Ghost gx gy _ _ _ _ _ _ _ _ _ _ _ _) -> (gx, gy)) x
+                                 sxDiff = sx - fst pos
+                                 syDiff = sy - snd pos
                                  nearDistance = 5
 
 tileScore :: Tile -> Int

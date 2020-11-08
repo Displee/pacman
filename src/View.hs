@@ -4,15 +4,17 @@ import Model
 import Controller
 
 import Graphics.Gloss
+import Data.Fixed (mod')
 
 getGhostIcon :: Ghost -> Picture
-getGhostIcon (Ghost gx gy gi _ _ _ _ _  _ _ _ _ _) = translate gx gy gi
+getGhostIcon (Ghost gx gy gi _ _ _ _ _ _  _ _ _ _ _) = translate gx gy gi
 
 getGhostIcon' :: Ghost -> Picture -> Picture
-getGhostIcon' (Ghost gx gy gi _ _ _ _ _ _  _ _ _ _ _) pic  = translate gx gy pic
+getGhostIcon' (Ghost gx gy gi _ _ _ _ _ _ _ _ _ _ _) = translate gx gy
+
 view :: GameState -> IO Picture
 view gs@(GameState _ _ (Player pi pis px py (Tile x y _) d _ _ _ _ ) g gt) = do
-                                let gridPicture = viewPure gs
+                                let gridPicture = drawTileGrid gs
                                 let pacman = translate px py (picturechanger pis d gt)
                                 let pinkghostpic = ghostchanger (takeghost Pinky g) gt
                                 let blueghostpic = ghostchanger (takeghost Inky g) gt
@@ -22,9 +24,9 @@ view gs@(GameState _ _ (Player pi pis px py (Tile x y _) d _ _ _ _ ) g gt) = do
                                 let inky = getGhostIcon' (takeghost Inky g) blueghostpic
                                 let blinky = getGhostIcon' (takeghost Blinky g) redghostpic
                                 let clyde = getGhostIcon' (takeghost Clyde g) yellowghostpic
-                                let scorePicture = translate 0 0 $ scale (-100) (-100) $ color white $ text ("Score: 0" ++ show 0)
+                                --let scorePicture = translate 0 0 $ scale (-100) (-100) $ color white $ text ("Score: 0" ++ show 0)
                                 --let lifesPicture = translate 0 0 $ color white $ text ("Lifes: " ++ show 0)
-                                return (Pictures [gridPicture, pacman,pinky, inky, blinky, clyde, scorePicture])
+                                return (Pictures [gridPicture, pacman, pinky, inky, blinky, clyde])
 
 
 drawTileGrid :: GameState -> Picture
@@ -38,12 +40,6 @@ drawTileGrid (GameState (Maze w h l t) status p _ _) = Pictures $ (grid gridPadd
                                                                                         | t == FlashingDot = Pictures [fillCellSmart gridPaddingLeft gridPaddingTop x y (black), translate (tileToScreenX x) (tileToScreenY y) (Color white $ Graphics.Gloss.circleSolid 6)]
                                                                                         | otherwise = fillCellSmart gridPaddingLeft gridPaddingTop x y (tileColor t)
                                                                   filled xs = map fillTile xs
-
-viewPure :: GameState -> Picture
-viewPure gs = case status gs of
-  NotPlaying  -> drawTileGrid gs
-  Playing     -> color green (text "Playing!")
-  GameOver    -> color green (text "Game over!")
 
 pacmanviewer :: IO [Animation]
 pacmanviewer = do
@@ -61,16 +57,18 @@ pacmanviewer = do
                (Animation South 2 pacSouth2): (Animation West 1 pacWest1):(Animation West 2 pacWest2):
                (Animation East 1 pacEast1) :(Animation East 2 pacEast2) :(Solid solid) : [])
 
-picturechanger icons d  gt = case (gt `div` 3) `mod` 3 of
+picturechanger :: [Animation] -> Direction -> Float -> Picture
+picturechanger icons d gt = case (gt / 3) `mod'` 3 of
                                         0 -> takepic d 1 icons
                                         1 -> takepic d 2 icons
                                         _ -> takesolid icons
-ghostchanger :: Integral a => Ghost -> a -> Picture
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Scatter _ _ _)  gt = case (gt `div` 3) `mod` 2 of
+                                        
+ghostchanger :: Ghost -> Float -> Picture
+ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ Scatter _ _ _)  gt = case (gt / 3) `mod'` 2 of
                                                                  0 -> takescatter gis 1 Blue
                                                                  _ -> takescatter gis 2 Blue
 
-ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _)  gt =case (gt `div` 3) `mod` 2 of
+ghostchanger (Ghost gx gy gi gis _ _ _ d _  _ _ _ _ _)  gt =case (gt / 3) `mod'` 2 of
                                                                  0 -> takepic d 1 gis
                                                                  _ -> takepic d 2 gis
 
