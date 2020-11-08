@@ -7,6 +7,10 @@ startTimeInSeconds = 4
 
 data GameStatus = Starting | Playing | Paused | GameOver deriving (Eq, Show)
 
+data Animation = Animation Direction Int Picture | Solid Picture  | Scattermode GhostColor Int Picture  deriving Eq
+
+data GhostColor = White | Blue deriving Eq
+
 data GameState = GameState {
       maze :: Maze,
       status :: GameStatus,
@@ -19,7 +23,7 @@ data TileType = Dot | FlashingDot | NormalTile | Wall
                   deriving(Eq, Show)
 data Direction = North | East | South | West deriving(Eq, Show)
 
-data GhostType = Pinky | Inky| Blinky | Clyde
+data GhostType = Pinky | Inky| Blinky | Clyde deriving Eq
 
 data Mode = Scatter | Chase | Frighten deriving(Eq, Show)
 
@@ -27,6 +31,7 @@ data Ghost = Ghost {
                       gx :: Float,
                       gy :: Float,
                       ghostIcon :: Picture,
+                      ghostIcons :: [Animation],
                       ghosttype :: GhostType,
                       posghost :: Tile,
                       prevloc :: Direction,
@@ -54,6 +59,7 @@ data Maze = Maze {
 
 data Player = Player {
                       playerIcon :: Picture,
+                      playerIcons :: [Animation],
                       playerX :: Float,
                       playerY :: Float,
                       posplayer :: Tile,

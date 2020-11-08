@@ -10,16 +10,21 @@ import Graphics.Gloss.Interface.IO.Game
 main :: IO ()
 main = do
           pacman <- loadBMP "data/ghost/pacmanright1.bmp"
-          g1Icon <- loadBMP "data/ghost/ghostorange.bmp"
-          g2Icon <- loadBMP "data/ghost/pinky.bmp"
-          g3Icon <- loadBMP "data/ghost/ghostred.bmp"
-          g4Icon <- loadBMP "data/ghost/ghostblue.bmp"
+          pinkyg <- loadBMP "data/PinkGhost/GhostPinkWest1.bmp"
+          inkyg <- loadBMP "data/ghost/pinky.bmp"
+          blinkyg <- loadBMP "data/ghost/ghostred.bmp"
+          clydeg <- loadBMP "data/ghost/ghostblue.bmp"
+          icons   <- pacmanviewer
+          pinkghosticons <- pinkGhostviewer
+          blueghosticons <-blueGhostviewer
+          yellowghosticons <- yellowGhostviewer
+          redghosticons <- redGhostviewer
           maze <- createMaze 55 35 0
-          let g1 = Ghost (tileToScreenX 14) (tileToScreenY 15) g1Icon Pinky (Tile 14 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
-          let g2 = Ghost (tileToScreenX 14) (tileToScreenY 16) g2Icon Inky (Tile 14 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
-          let g3 = Ghost (tileToScreenX 15) (tileToScreenY 15) g3Icon Blinky (Tile 15 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
-          let g4 = Ghost (tileToScreenX 15) (tileToScreenY 16) g4Icon Clyde (Tile 15 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
-          let initialGameState = GameState maze Starting (createPlayer pacman maze 15 20) [g1, g2, g3, g4] 0
+          let pinky = Ghost (tileToScreenX 14) (tileToScreenY 15) pinkyg pinkghosticons Pinky (Tile 14 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let inky = Ghost (tileToScreenX 14) (tileToScreenY 16)  inkyg blueghosticons Inky (Tile 14 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let blinky = Ghost (tileToScreenX 15) (tileToScreenY 15)  blinkyg redghosticons Blinky (Tile 15 15 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let clyde = Ghost (tileToScreenX 15) (tileToScreenY 16)  clydeg yellowghosticons Clyde (Tile 15 16 NormalTile) West West Nothing 1 Chase 1 1 startGhostCageTicks
+          let initialGameState = GameState maze NotPlaying (createPlayer pacman icons maze 15 14) [pinky, inky, blinky, clyde] 0
           playIO (InWindow "PacMan" (screenWidth, screenHeight) (0, 0)) -- Or FullScreen
                         black            -- Background color
                         60               -- Frames per second
@@ -33,8 +38,7 @@ createMaze w h l = do
                       levelContent <- readFile ("./data/level_" ++ show l ++ ".txt")
                       return (Maze w h l (gridMaker 1 1 levelContent))
 
-createPlayer :: Picture -> Maze -> Int -> Int -> Player
-createPlayer icon m tx ty = Player icon (tileToScreenX tx) (tileToScreenY ty) tile West Nothing 1 0 3
+createPlayer  icon icons m tx ty = Player icon icons (tileToScreenX tx) (tileToScreenY ty) tile West Nothing 1 0 3
                             where
                                   tile :: Tile
                                   tile = Tile tx ty NormalTile --TODO Get tile from maze
