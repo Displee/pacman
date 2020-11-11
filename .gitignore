@@ -1,3 +1,4 @@
+# Stack
 .stack-work/
 *~
 
@@ -5,3 +6,8 @@
 .idea
 out
 *.iml
+
+# VsCode
+.vscode
+
+# Other
