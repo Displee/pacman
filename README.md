@@ -4,6 +4,13 @@ It is un-finished. Basic functionality has been written so far (and works). This
 
 ![alt text](https://i.imgur.com/74Nx1xA.png, "Pacman ingame")
 
+## Keys
+These keys are currently handled by the program:
+- '↑' Move up
+- '→' Move right
+- '↓' Move down
+- '←' Move left
+
 ### Progress
 - [ ] Start game
     - [x] Starting timer
@@ -38,6 +45,7 @@ It is un-finished. Basic functionality has been written so far (and works). This
     - [ ] Cherry (100 points)
     - [ ] Strawberry (300 points)
     - [ ] Others...
+- [ ] Pause the game with the 'p' key
 
 ## Credits
 - Displee (me)
